@@ -27,6 +27,19 @@ sdd      8:48   0  5,4G  0 disk
 sde      8:64   0  5,4G  0 disk 
 sr0     11:0    1 1024M  0 rom  
 ```
+
+**Создаем logical volume(lv_root) В volume groupe(vg_root) на physical volume(sdb)**
+
+```bash
+kirill@ubuntusrv:~$ sudo pvcreate /dev/sdb
+[sudo] password for kirill: 
+  Physical volume "/dev/sdb" successfully created.
+kirill@ubuntusrv:~$ sudo vgcreate vg_root /dev/sdb
+  Volume group "vg_root" successfully created
+kirill@ubuntusrv:~$ sudo lvcreate -n lv_root -l +100%FREE /dev/vg_root 
+  Logical volume "lv_root" created.
+```
+
 </details>
 <details>
     <summary>3. ZFS</summary>
