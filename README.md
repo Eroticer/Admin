@@ -4,6 +4,9 @@
 <details>
     <summary>2. LVM-1,2</summary>
 <b>Описание задания</b>
+
+**Смотрим блочные устройства**
+
 ```bash
 kirill@ubuntusrv:~$ lsblk
 NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
