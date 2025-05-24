@@ -38,8 +38,6 @@ bin.usr-is-merged  etc   lib.usr-is-merged  opt   sbin                sys
 boot               home  lost+found         proc  sbin.usr-is-merged  tmp
 cdrom              lib   media              root  snap                usr
 kirill@ubuntusrv:~$ sudo bash -c 'mkdir -p /mnt/{proc,sys,dev,run,boot}; for i in /proc/ /sys/ /dev/ /run/ /boot/; do mount --bind "$i" "/mnt$i"; done'
-kirill@ubuntusrv:~$ chroot /mnt/
-chroot: cannot change root directory to '/mnt/': Operation not permitted
 kirill@ubuntusrv:~$ sudo chroot /mnt/
 root@ubuntusrv:/# grub-mkconfig -o /boot/grub/grub.cfg
 Sourcing file `/etc/default/grub'
