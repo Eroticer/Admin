@@ -304,6 +304,164 @@ drwxr-xr-x  13 root root  4096 мая 20 20:29 var
 ```
 </details>
 <details>
-    <summary>3. ZFS</summary>
-asasasas
+    <summary>4. NFS</summary>
+
+**Устанавливаем пакеты на пк и сервер**
+```bash
+sudo apt install nfs-kernel-server для сервера и sudo apt install nfs-common для клиента
+```
+
+**проверяем открытые порты 2049 и 111 на сервере**
+```bash
+kirill@ubuntupc:~$ ss -tnplu
+```
+
+**Создаем дирректорию для дальнейшего экспорта**
+```bash
+kirill@ubuntupc:~$ cd /etc
+kirill@ubuntupc:/etc$ sudo mkdir -p /srv/share/upload #-p проверяет наличие уже созданной такой папки
+```
+
+**настраиваем права доступа**
+```bash
+kirill@ubuntupc:/etc$ sudo chown -R nobody:nogroup /srv/share # рекурсивно меняем группу и пользователя на минимальные права
+kirill@ubuntupc:/etc$ sudo chmod 0777 /srv/share/upload # устанавливаем максимальные права на /upload
+```
+
+**Делаем запись на разрешения экспорта**
+```bash
+kirill@ubuntupc:/etc$ sudo vim /etc/exports
+#и добавляем в конец строчку
+#/srv/share 192.168.50.11/32(rw,sync,root_squash)
+```
+
+**Перезагружаем таблицу экспорта**
+```bash
+kirill@ubuntupc:/etc$ sudo exportfs -r
+exportfs: /etc/exports [1]: Neither 'subtree_check' or 'no_subtree_check' specified for export "192.168.1.6/32:/srv/share/".
+  Assuming default behaviour ('no_subtree_check').
+  NOTE: this default has changed since nfs-utils version 1.0.x
+```
+
+**выводим таблицу для проверки**
+```bash
+kirill@ubuntupc:/etc$ sudo exportfs -s
+/srv/share  192.168.1.6/32(sync,wdelay,hide,no_subtree_check,sec=sys,rw,secure,root_squash,no_all_squash)
+```
+
+**<b>Настраиваем клиента</b>**
+```bash
+Добавляем запись в fstab
+kirill@ubuntu:~$ sudo bash -c " echo '192.168.1.7:/srv/share/ /mnt nfs vers=3,noauto,x-systemd.automount 0 0' >> /etc/fstab"
+```
+
+**в данном случае происходит автоматическая генерация systemd units в каталоге /run/systemd/generator/, которые производят монтирование при первом обращении к каталогу /mnt**
+```bash
+kirill@ubuntu:~$ systemctl daemon-reload
+==== AUTHENTICATING FOR org.freedesktop.systemd1.reload-daemon ====
+Чтобы заставить systemd перечитать конфигурацию, необходимо пройти аутентификацию.
+Authenticating as: kirill
+Password: 
+==== AUTHENTICATION COMPLETE ====
+kirill@ubuntu:~$ systemctl restart remote-fs.target
+==== AUTHENTICATING FOR org.freedesktop.systemd1.manage-units ====
+Чтобы перезапустить «remote-fs.target», необходимо пройти аутентификацию.
+Authenticating as: kirill
+Password: 
+==== AUTHENTICATION COMPLETE ====
+
+kirill@ubuntu:~$ ls /mnt #ls/mnt потому что монтируется только при обращении из за x-systemd.automount
+upload
+kirill@ubuntu:~$ mount | grep mnt
+nsfs on /run/snapd/ns/snapd-desktop-integration.mnt type nsfs (rw)
+nsfs on /run/snapd/ns/firmware-updater.mnt type nsfs (rw)
+systemd-1 on /mnt type autofs (rw,relatime,fd=90,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=25751)
+192.168.1.7:/srv/share/ on /mnt type nfs (rw,relatime,vers=3,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=192.168.1.7,mountvers=3,mountport=54122,mountproto=udp,local_lock=none,addr=192.168.1.7)
+```
+
+**Проверяем работоспособность**
+```bash
+#server
+kirill@ubuntupc:/srv/share$ sudo touch checkfile
+[sudo] password for kirill: 
+kirill@ubuntupc:/srv/share$ 
+checkfile upload
+
+#client
+kirill@ubuntu:~$ ls /mnt
+checkfile  upload
+kirill@ubuntu:~$ sudo touch /mnt/client_file
+[sudo] пароль для kirill: 
+kirill@ubuntu:~$ ls /mnt
+checkfile  client_file  upload
+kirill@ubuntu:~$ sudo reboot
+
+Broadcast message from root@ubuntu on pts/2 (Mon 2025-05-26 19:53:35 UTC):
+
+The system will reboot now!
+
+eroticer@eroticer-Nitro-AN515-55:~$ ssh kirill@192.168.1.6
+kirill@192.168.1.6's password: 
+Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.11.0-26-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Расширенное поддержание безопасности (ESM) для Applications выключено.
+
+110 обновлений может быть применено немедленно.
+Чтобы просмотреть дополнительные обновления выполните: apt list --upgradable
+
+Включите ESM Apps для получения дополнительных будущих обновлений безопасности.
+Смотрите https://ubuntu.com/esm или выполните: sudo pro status
+
+Last login: Sun May 25 20:11:56 2025 from 192.168.1.4
+kirill@ubuntu:~$ ls /mnt
+checkfile  client_file  upload
+```
+```bash
+#server
+
+kirill@ubuntupc:/srv/share$ sudo reboot
+
+Broadcast message from root@ubuntupc on pts/1 (Mon 2025-05-26 20:00:40 UTC):
+
+The system will reboot now!
+
+kirill@ubuntupc:/srv/share$ Connection to 192.168.1.7 closed by remote host.
+Connection to 192.168.1.7 closed.
+eroticer@eroticer-Nitro-AN515-55:~$ ssh kirill@192.168.1.7
+kirill@192.168.1.7's password: 
+Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-60-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Пн 26 мая 2025 20:01:58 UTC
+
+  System load:             1.82
+  Usage of /:              10.4% of 24.44GB
+  Memory usage:            2%
+  Swap usage:              0%
+  Processes:               136
+  Users logged in:         0
+  IPv4 address for enp0s3: 192.168.1.7
+  IPv6 address for enp0s3: 2a00:1370:8192:5f39:a00:27ff:fe13:8c55
+
+
+Расширенное поддержание безопасности (ESM) для Applications выключено.
+
+63 обновления может быть применено немедленно.
+Чтобы просмотреть дополнительные обновления выполните: apt list --upgradable
+
+Включите ESM Apps для получения дополнительных будущих обновлений безопасности.
+Смотрите https://ubuntu.com/esm или выполните: sudo pro status
+
+
+Last login: Sun May 25 20:11:05 2025 from 192.168.1.4
+kirill@ubuntupc:~$ ls /srv/share/
+checkfile  client_file  upload
+```
 </details>
