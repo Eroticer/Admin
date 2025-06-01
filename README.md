@@ -465,3 +465,213 @@ kirill@ubuntupc:~$ ls /srv/share/
 checkfile  client_file  upload
 ```
 </details>
+
+<details>
+    <summary>5. Управление пакетами</summary>
+
+-------------------------------------------------------------------------------------------
+ALMA LIN
+-------------------------------------------------------------------------------------------		
+
+**Устанавливаем все необходимые пакеты**
+```bash
+[root@localhost ~]# yum install wget -y rpmdevtools rpm-build createrepo yum-utils cmake gcc git vim
+Complete!
+[root@localhost ~]# mkdir rpm && cd rpm
+[root@localhost rpm]# yumdownloader --source nginx #SRPM пакет
+enabling appstream-source repository
+enabling baseos-source repository
+enabling extras-source repository
+AlmaLinux 10 - AppStream - Source               245 kB/s | 480 kB     00:01    
+AlmaLinux 10 - BaseOS - Source                   95 kB/s | 171 kB     00:01    
+AlmaLinux 10 - Extras - Source                  1.1 kB/s | 1.9 kB     00:01    
+nginx-1.26.3-1.el10.src.rpm                     1.0 MB/s | 1.3 MB     00:01
+```
+
+**Ставим зависимости**
+```bash
+[root@localhost rpm]# rpm -Uvh nginx*.src.rpm
+Updating / installing...
+   1:nginx-2:1.26.3-1.el10            ################################# [100%]
+[root@localhost rpm]# yum-builddep nginx
+Complete!
+```
+
+**Скачиваем и собираем модуль brotli**
+```bash
+[root@localhost rpm]# cd /root
+[root@localhost ~]# git clone --recurse-submodules -j8 https://github.com/google/ngx_brotli
+[root@localhost ~]# cd ngx_brotli/deps/brotli
+[root@localhost brotli]# mkdir out && cd out
+[root@localhost out]# cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_CXX_FLAGS="-Ofast -m64 -march=native -mtune=native -flto -funroll-loops -ffunction-sections -fdata-sections -Wl,--gc-sections" -DCMAKE_INSTALL_PREFIX=./installed ..
+[root@localhost out]# cmake --build . --config Release -j 2 --target brotlienc
+[100%] Built target brotlienc
+```
+
+**Добавляем модуль brotli в конфигурации (nginx.spec) и собираем пакет**
+```bash
+[root@localhost ~]# vim ~/rpmbuild/SPECS/nginx.spec
+[root@localhost ~]# rpmbuild -ba nginx.spec -D 'debug_package %{nil}'
+Executing(%clean): /bin/sh -e /var/tmp/rpm-tmp.BfOZTZ
++ umask 022
++ cd /root/rpmbuild/BUILD
++ cd nginx-1.26.3
++ /usr/bin/rm -rf /root/rpmbuild/BUILDROOT/nginx-1.26.3-1.el10.x86_64
++ RPM_EC=0
+++ jobs -p
++ exit 0
+Executing(rmbuild): /bin/sh -e /var/tmp/rpm-tmp.ljiRzK
++ umask 022
++ cd /root/rpmbuild/BUILD
++ rm -rf /root/rpmbuild/BUILD/nginx-1.26.3-SPECPARTS
++ rm -rf nginx-1.26.3 nginx-1.26.3.gemspec
++ RPM_EC=0
+++ jobs -p
++ exit 0
+
+[root@localhost x86_64]# ll
+total 2260
+-rw-r--r--. 1 root root   33138 Jun  1 14:00 nginx-1.26.3-1.el10.x86_64.rpm
+```
+
+**Проверяем работу**
+```bash
+[root@localhost x86_64]# cp ~/rpmbuild/RPMS/noarch/* ~/rpmbuild/RPMS/x86_64/
+[root@localhost x86_64]# yum localinstall *.rpm
+Complete!
+[root@localhost x86_64]# systemctl start nginx
+[root@localhost x86_64]# sysyemctl status nginx
+-bash: sysyemctl: command not found
+[root@localhost x86_64]# systemctl status nginx
+● nginx.service - The nginx HTTP and reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; disabled; preset: d>
+     Active: active (running) since Sun 2025-06-01 14:47:20 MSK; 22s ago
+ Invocation: 39ac2f2d50b64f87889ef19b18d68bcb
+    Process: 11324 ExecStartPre=/usr/bin/rm -f /run/nginx.pid (code=exited, sta>
+    Process: 11326 ExecStartPre=/usr/sbin/nginx -t (code=exited, status=0/SUCCE>
+    Process: 11328 ExecStart=/usr/sbin/nginx (code=exited, status=0/SUCCESS)
+   Main PID: 11329 (nginx)
+      Tasks: 3 (limit: 53272)
+     Memory: 4.9M (peak: 4.9M)
+        CPU: 105ms
+     CGroup: /system.slice/nginx.service
+             ├─11329 "nginx: master process /usr/sbin/nginx"
+             ├─11330 "nginx: worker process"
+             └─11331 "nginx: worker process"
+
+Jun 01 14:47:20 localhost.localdomain systemd[1]: Starting nginx.service - The >
+Jun 01 14:47:20 localhost.localdomain nginx[11326]: nginx: the configuration fi>
+Jun 01 14:47:20 localhost.localdomain nginx[11326]: nginx: configuration file />
+Jun 01 14:47:20 localhost.localdomain systemd[1]: Started nginx.service - The n>
+[root@localhost x86_64]# 
+```
+
+**Создаем репозиторий и копируем туда пакеты**
+```bash
+[root@localhost x86_64]# mkdir /usr/share/nginx/html/repo
+[root@localhost x86_64]# cp ~/rpmbuild/RPMS/x86_64/*.rpm /usr/share/nginx/html/repo/
+[root@localhost x86_64]# createrepo /usr/share/nginx/html/repo/
+Directory walk started
+Directory walk done - 10 packages
+Temporary output repo path: /usr/share/nginx/html/repo/.repodata/
+Pool started (with 5 workers)
+Pool finished
+```
+
+**Добавляем директивы и перезапускаем сервер**
+```bash
+[root@localhost x86_64]# vim /etc/nginx/nginx.conf
+
+ server {
+        listen       80;
+        listen       [::]:80;
+        server_name  _;
+        root         /usr/share/nginx/html;
+        index index.html index.htm; #Добавляем эту строку
+        autoindex on; #и эту
+        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+    }
+
+[root@localhost x86_64]# nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[root@localhost x86_64]# nginx -s reload
+
+[root@localhost x86_64]# curl -a http://localhost/repo
+<html>
+<head><title>301 Moved Permanently</title></head>
+<body>
+<center><h1>301 Moved Permanently</h1></center>
+<hr><center>nginx/1.26.3</center>
+</body>
+</html>
+```
+**Подключаем репозиторий и обновляем спиок пакетов**
+```bash
+[root@localhost x86_64]# cat >> /etc/yum.repos.d/otus.repo << EOF
+> [otus]
+> name=otus-linux
+> baseurl=http://localhost/repo
+> gpgcheck=0
+> enabled=1
+> EOF
+
+[root@localhost x86_64]# yum repolist enabled | grep otus
+otus                             otus-linux
+
+[root@localhost x86_64]# yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+Last metadata expiration check: 0:03:05 ago on Sun Jun  1 16:22:19 2025.
+percona-release-latest.noarch.rpm                46 kB/s |  28 kB     00:00    
+Dependencies resolved.
+================================================================================
+ Package                Architecture  Version         Repository           Size
+================================================================================
+Installing:
+ percona-release        noarch        1.0-30          @commandline         28 k
+
+Transaction Summary
+================================================================================
+Install  1 Package
+
+Total size: 28 k
+Installed size: 49 k
+Downloading Packages:
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                        1/1 
+  Installing       : percona-release-1.0-30.noarch                          1/1 
+  Running scriptlet: percona-release-1.0-30.noarch                          1/1 
+Specified repository is not supported for current operating system!
+Specified repository is not supported for current operating system!
+Specified repository is not supported for current operating system!
+The percona-release package now contains a percona-release script that can enable additional repositories for our newer products.
+
+Note: currently there are no repositories that contain Percona products or distributions enabled. We recommend you to enable Percona Distribution repositories instead of individual product repositories, because with the Distribution you will get not only the database itself but also a set of other componets that will help you work with your database.
+
+For example, to enable the Percona Distribution for MySQL 8.0 repository use:
+
+  percona-release setup pdps8.0
+
+Note: To avoid conflicts with older product versions, the percona-release setup command may disable our original repository for some products.
+
+For more information, please visit:
+  https://docs.percona.com/percona-software-repositories/percona-release.html
+
+
+
+Installed:
+  percona-release-1.0-30.noarch                                                 
+
+Complete!
+[root@localhost x86_64]# createrepo /usr/share/nginx/html/repo
+Directory walk started
+Directory walk done - 10 packages
+Temporary output repo path: /usr/share/nginx/html/repo/.repodata/
+Pool started (with 5 workers)
+Pool finished
+```
+</details>
