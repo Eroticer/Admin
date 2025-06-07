@@ -3,7 +3,7 @@
 ## Домашние задания
 
 <details>
-    <summary>2. LVM-1,2</summary>
+  <summary>2. LVM-1,2</summary>
 <b>Описание задания</b>
 
 1. Настроить LVM в Ubuntu 24.04 Server
@@ -304,7 +304,7 @@ drwxr-xr-x  13 root root  4096 мая 20 20:29 var
 ```
 </details>
 <details>
-    <summary>4. NFS</summary>
+  <summary>4. NFS</summary>
 
 **Устанавливаем пакеты на пк и сервер**
 ```bash
@@ -675,3 +675,29 @@ Pool started (with 5 workers)
 Pool finished
 ```
 </details>
+<details>
+  <summary>Загрузка системы</summary>
+Меняем настройки граб и перезагружаем комп
+
+```bash
+kir@ubu:~# sudo vim /etc/default/grub
+#коментирум строку GRUB_TIMEOUT_STYLE=hidden
+#увеличиваем время видимости GRUB_TIMEOUT=10
+kir@ubu:~# sudo update-grub
+kir@ubu:~# reboot
+```
+
+Далее выбираем пункт: **Advanced options for Ubuntu*
+
+  <img src='./image/load-sys/photo_2025-06-07_09-05-25.jpg' />
+
+Тут включам сеть и переходим в root
+
+  <img src='./image/load-sys/photo_2025-06-07_09-05-29.jpg' />
+
+Далее Создаем VG и менякм ее имя
+
+  <img src='./image/load-sys/photo_2025-06-07_09-05-33.jpg' />
+
+  <img src='./image/load-sys/photo_2025-06-07_09-05-37.jpg' />
+</details
