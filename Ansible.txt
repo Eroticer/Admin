@@ -1,0 +1,602 @@
+
+
+eroticer@eroticer-Nitro-AN515-55:~$ sudo systemctl status libvirtd
+● libvirtd.service - Virtualization daemon
+     Loaded: loaded (/lib/systemd/system/libvirtd.service; enabled; vendor pres>
+     Active: active (running) since Sun 2025-09-07 19:36:27 MSK; 13min ago
+TriggeredBy: ● libvirtd-ro.socket
+             ● libvirtd-admin.socket
+             ● libvirtd.socket
+       Docs: man:libvirtd(8)
+             https://libvirt.org
+   Main PID: 20472 (libvirtd)
+      Tasks: 21 (limit: 32768)
+     Memory: 10.5M
+        CPU: 371ms
+     CGroup: /system.slice/libvirtd.service
+             ├─20472 /usr/sbin/libvirtd
+             ├─20596 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/def>
+             └─20597 /usr/sbin/dnsmasq --conf-file=/var/lib/libvirt/dnsmasq/def>
+
+eroticer@eroticer-Nitro-AN515-55:~$ cd vagrant-vm/
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo nano Vagrantfile 
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ vagrant box list
+rockylinux/9 (virtualbox, 6.0.0)
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo nano Vagrantfile 
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo vagrant up --provider=libvirt
+Bringing machine 'nginx' up with 'libvirt' provider...
+==> nginx: Checking if box 'rockylinux/9' version '6.0.0' is up to date...
+==> nginx: Starting domain.
+==> nginx: Waiting for domain to get an IP address...
+==> nginx: Waiting for machine to boot. This may take a few minutes...
+    nginx: SSH address: 192.168.121.64:22
+    nginx: SSH username: vagrant
+    nginx: SSH auth method: private key
+    nginx: 
+    nginx: Vagrant insecure key detected. Vagrant will automatically replace
+    nginx: this with a newly generated keypair for better security.
+    nginx: 
+    nginx: Inserting generated public key within guest...
+    nginx: Removing insecure key from the guest if it's present...
+    nginx: Key inserted! Disconnecting and reconnecting using new SSH key...
+==> nginx: Machine booted and ready!
+==> nginx: Creating shared folders metadata...
+==> nginx: Rsyncing folder: /home/eroticer/vagrant-vm/ => /vagrant
+==> nginx: Running provisioner: shell...
+    nginx: Running: inline script
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ vagrant status
+Error while connecting to Libvirt: Error making a connection to libvirt URI qemu:///system:
+Call to virConnectOpen failed: Failed to connect socket to '/var/run/libvirt/libvirt-sock': Permission denied
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo vagrant status
+Current machine states:
+
+nginx                     running (libvirt)
+
+The Libvirt domain is running. To stop this machine, you can run
+`vagrant halt`. To destroy the machine, you can run `vagrant destroy`.
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo vagrant ssh
+[vagrant@localhost ~]$ sudo systemctl status
+● localhost.localdomain
+    State: running
+    Units: 275 loaded (incl. loaded aliases)
+     Jobs: 0 queued
+   Failed: 0 units
+    Since: Sun 2025-09-07 17:17:55 UTC; 10min ago
+  systemd: 252-51.el9
+   CGroup: /
+           ├─init.scope
+           │ └─1 /usr/lib/systemd/systemd --switched-root --system --deserialize 31
+           ├─system.slice
+           │ ├─NetworkManager.service
+           │ │ └─566 /usr/sbin/NetworkManager --no-daemon
+           │ ├─auditd.service
+           │ │ └─527 /sbin/auditd
+           │ ├─chronyd.service
+           │ │ └─595 /usr/sbin/chronyd -F 2
+           │ ├─crond.service
+           │ │ └─623 /usr/sbin/crond -n
+           │ ├─dbus-broker.service
+           │ │ ├─564 /usr/bin/dbus-broker-launch --scope system --audit
+           │ │ └─565 dbus-broker --log 4 --controller 9 --machine-id a6a5bf2513a1462b884313ce30c0df7c --max-bytes 536>
+           │ ├─gssproxy.service
+lines 1-23
+^C
+[vagrant@localhost ~]$ ip addr show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:ba:d7:a2 brd ff:ff:ff:ff:ff:ff
+    altname enp0s5
+    altname ens5
+    inet 192.168.121.64/24 brd 192.168.121.255 scope global dynamic noprefixroute eth0
+       valid_lft 2973sec preferred_lft 2973sec
+    inet6 fe80::5054:ff:feba:d7a2/64 scope link 
+       valid_lft forever preferred_lft forever
+[vagrant@localhost ~]$ exit
+logout
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo virsh net-define /dev/stdin <<EOF
+> <network>
+>  <name>mynet</name>
+>  <bridge name="virbr-mynet"/>
+>  <ip address="192.168.11.1" netmask="255.255.255.0">
+>   <dhcp>
+>    <range start="192.168.11.100" end="192.168.11.200"/>
+>   </dhcp>
+>  </ip>
+> </network>
+> EOF
+Network mynet defined from /dev/stdin
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo virsh net-stat mynet
+error: unknown command: 'net-stat'
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo virsh net-start mynet
+error: Failed to start network mynet
+error: internal error: Network is already in use by interface virbr2
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo virsh net-list --all
+ Name              State      Autostart   Persistent
+------------------------------------------------------
+ default           active     yes         yes
+ mynet             inactive   no          yes
+ vagrant-libvirt   active     no          yes
+ vagrant-vm0       active     no          yes
+      
+       
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano Vagrantfile 
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo vagrant up
+Bringing machine 'nginx' up with 'libvirt' provider...
+==> nginx: Checking if box 'rockylinux/9' version '6.0.0' is up to date...
+==> nginx: Machine already provisioned. Run `vagrant provision` or use the `--provision`
+==> nginx: flag to force provisioning. Provisioners marked to run always will still run.
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo vagrant ssh
+Last login: Sun Sep  7 17:33:47 2025 from 192.168.121.1
+[vagrant@localhost ~]$ ip addr show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:ba:d7:a2 brd ff:ff:ff:ff:ff:ff
+    altname enp0s5
+    altname ens5
+    inet 192.168.121.64/24 brd 192.168.121.255 scope global dynamic noprefixroute eth0
+       valid_lft 2347sec preferred_lft 2347sec
+    inet6 fe80::5054:ff:feba:d7a2/64 scope link 
+       valid_lft forever preferred_lft forever
+[vagrant@localhost ~]$ exit
+logout
+
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ mkdir -p stading templates
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ls
+stading  templates  Vagrantfile
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo apt update
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo apt install ansible -y
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo apt install sshpass -y
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ vagrant status
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano staging/hosts 
+
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ sudo ansible all -m ping
+nginx | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to connect to the host via ssh: Warning: Permanently added '192.168.121.6' (ED25519) to the list of known hosts.\r\nvagrant@192.168.121.6: Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password).",
+    "unreachable": true
+}
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano staging/hosts 
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible all -m ping -e "ansible_ssh_pass=vagrant"
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+nginx | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano nginx.yml
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ls
+ansible.cfg  staging  templates  Vagrantfile
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano staging/hosts
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano nginx.yml
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano ansible.cfg 
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano nginx.yml
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano templates/nginx.conf.j2
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible-playbook nginx.yml
+
+PLAY [NGINX | Install and configure NGINX] ***************************************************************************
+
+TASK [Gathering Facts] ***********************************************************************************************
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+ok: [nginx]
+
+TASK [Install NGINX package] *****************************************************************************************
+changed: [nginx]
+
+TASK [Create NGINX config file from template] ************************************************************************
+changed: [nginx]
+
+TASK [Ensure nginx service is started and enabled] *******************************************************************
+fatal: [nginx]: FAILED! => {"changed": false, "msg": "Unable to start service nginx: Job for nginx.service failed because the control process exited with error code.\nSee \"systemctl status nginx.service\" and \"journalctl -xeu nginx.service\" for details.\n"}
+
+RUNNING HANDLER [restart nginx] **************************************************************************************
+
+PLAY RECAP ***********************************************************************************************************
+nginx                      : ok=3    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+
+
+*Результаты*
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible nginx -m shell -a "sudo systemctl status nginx" -e "ansible_ssh_pass=vagrant"
+ansible nginx -m shell -a "sudo journalctl -u nginx -n 20" -e "ansible_ssh_pass=vagrant"
+[WARNING]: Consider using 'become', 'become_method', and 'become_user' rather than running sudo
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+nginx | FAILED | rc=3 >>
+× nginx.service - The nginx HTTP and reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: disabled)
+     Active: failed (Result: exit-code) since Sun 2025-09-07 18:50:44 UTC; 1min 6s ago
+    Process: 10637 ExecStartPre=/usr/bin/rm -f /run/nginx.pid (code=exited, status=0/SUCCESS)
+    Process: 10643 ExecStartPre=/usr/sbin/nginx -t (code=exited, status=1/FAILURE)
+        CPU: 10ms
+
+Sep 07 18:50:44 nginx systemd[1]: Starting The nginx HTTP and reverse proxy server...
+Sep 07 18:50:44 nginx nginx[10643]: nginx: [emerg] unknown directive "nginx" in /etc/nginx/nginx.conf:3
+Sep 07 18:50:44 nginx nginx[10643]: nginx: configuration file /etc/nginx/nginx.conf test failed
+Sep 07 18:50:44 nginx systemd[1]: nginx.service: Control process exited, code=exited, status=1/FAILURE
+Sep 07 18:50:44 nginx systemd[1]: nginx.service: Failed with result 'exit-code'.
+Sep 07 18:50:44 nginx systemd[1]: Failed to start The nginx HTTP and reverse proxy server.non-zero return code
+[WARNING]: Consider using 'become', 'become_method', and 'become_user' rather than running sudo
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+nginx | CHANGED | rc=0 >>
+Sep 07 18:50:44 nginx systemd[1]: Starting The nginx HTTP and reverse proxy server...
+Sep 07 18:50:44 nginx nginx[10643]: nginx: [emerg] unknown directive "nginx" in /etc/nginx/nginx.conf:3
+Sep 07 18:50:44 nginx nginx[10643]: nginx: configuration file /etc/nginx/nginx.conf test failed
+Sep 07 18:50:44 nginx systemd[1]: nginx.service: Control process exited, code=exited, status=1/FAILURE
+Sep 07 18:50:44 nginx systemd[1]: nginx.service: Failed with result 'exit-code'.
+Sep 07 18:50:44 nginx systemd[1]: Failed to start The nginx HTTP and reverse proxy server.
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible nginx -m shell -a "sudo nginx -t" -e "ansible_ssh_pass=vagrant"
+[WARNING]: Consider using 'become', 'become_method', and 'become_user' rather than running sudo
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+nginx | FAILED | rc=1 >>
+nginx: [emerg] unknown directive "nginx" in /etc/nginx/nginx.conf:3
+nginx: configuration file /etc/nginx/nginx.conf test failednon-zero return code
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ nano templates/nginx.conf.j2
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible-playbook nginx.yml -e "ansible_ssh_pass=vagrant"
+
+PLAY [NGINX | Install and configure NGINX] ***************************************************************************
+
+TASK [Gathering Facts] ***********************************************************************************************
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+ok: [nginx]
+
+TASK [Install NGINX package] *****************************************************************************************
+ok: [nginx]
+
+TASK [Create NGINX config file from template] ************************************************************************
+changed: [nginx]
+
+TASK [Ensure nginx service is started and enabled] *******************************************************************
+changed: [nginx]
+
+RUNNING HANDLER [restart nginx] **************************************************************************************
+changed: [nginx]
+
+PLAY RECAP ***********************************************************************************************************
+nginx                      : ok=5    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible nginx -m systemd -a "name=nginx enabled=yes" -e "ansible_ssh_pass=vagrant"
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+nginx | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "enabled": true,
+    "name": "nginx",
+    "status": {
+        "AccessSELinuxContext": "system_u:object_r:httpd_unit_file_t:s0",
+        "ActiveEnterTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "ActiveEnterTimestampMonotonic": "2702457799",
+        "ActiveExitTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "ActiveExitTimestampMonotonic": "2702426948",
+        "ActiveState": "active",
+        "After": "system.slice systemd-tmpfiles-setup.service tmp.mount basic.target sysinit.target network-online.target nss-lookup.target systemd-journald.socket remote-fs.target -.mount",
+        "AllowIsolate": "no",
+        "AssertResult": "yes",
+        "AssertTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "AssertTimestampMonotonic": "2702431232",
+        "Before": "multi-user.target shutdown.target",
+        "BlockIOAccounting": "no",
+        "BlockIOWeight": "[not set]",
+        "CPUAccounting": "yes",
+        "CPUAffinityFromNUMA": "no",
+        "CPUQuotaPerSecUSec": "infinity",
+        "CPUQuotaPeriodUSec": "infinity",
+        "CPUSchedulingPolicy": "0",
+        "CPUSchedulingPriority": "0",
+        "CPUSchedulingResetOnFork": "no",
+        "CPUShares": "[not set]",
+        "CPUUsageNSec": "17995000",
+        "CPUWeight": "[not set]",
+        "CacheDirectoryMode": "0755",
+        "CanFreeze": "yes",
+        "CanIsolate": "no",
+        "CanReload": "yes",
+        "CanStart": "yes",
+        "CanStop": "yes",
+        "CapabilityBoundingSet": "cap_chown cap_dac_override cap_dac_read_search cap_fowner cap_fsetid cap_kill cap_setgid cap_setuid cap_setpcap cap_linux_immutable cap_net_bind_service cap_net_broadcast cap_net_admin cap_net_raw cap_ipc_lock cap_ipc_owner cap_sys_module cap_sys_rawio cap_sys_chroot cap_sys_ptrace cap_sys_pacct cap_sys_admin cap_sys_boot cap_sys_nice cap_sys_resource cap_sys_time cap_sys_tty_config cap_mknod cap_lease cap_audit_write cap_audit_control cap_setfcap cap_mac_override cap_mac_admin cap_syslog cap_wake_alarm cap_block_suspend cap_audit_read cap_perfmon cap_bpf cap_checkpoint_restore",
+        "CleanResult": "success",
+        "CollectMode": "inactive",
+        "ConditionResult": "yes",
+        "ConditionTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "ConditionTimestampMonotonic": "2702431231",
+        "ConfigurationDirectoryMode": "0755",
+        "Conflicts": "shutdown.target",
+        "ControlGroup": "/system.slice/nginx.service",
+        "ControlGroupId": "6467",
+        "ControlPID": "0",
+        "CoredumpFilter": "0x33",
+        "DefaultDependencies": "yes",
+        "DefaultMemoryLow": "0",
+        "DefaultMemoryMin": "0",
+        "Delegate": "no",
+        "Description": "The nginx HTTP and reverse proxy server",
+        "DevicePolicy": "auto",
+        "DynamicUser": "no",
+        "ExecMainCode": "0",
+        "ExecMainExitTimestampMonotonic": "0",
+        "ExecMainPID": "27653",
+        "ExecMainStartTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "ExecMainStartTimestampMonotonic": "2702457781",
+        "ExecMainStatus": "0",
+        "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -s reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecReloadEx": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -s reload ; flags= ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx ; ignore_errors=no ; start_time=[Sun 2025-09-07 18:53:50 UTC] ; stop_time=[Sun 2025-09-07 18:53:50 UTC] ; pid=27652 ; code=exited ; status=0 }",
+        "ExecStartEx": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx ; flags= ; start_time=[Sun 2025-09-07 18:53:50 UTC] ; stop_time=[Sun 2025-09-07 18:53:50 UTC] ; pid=27652 ; code=exited ; status=0 }",
+        "ExecStartPre": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -t ; ignore_errors=no ; start_time=[Sun 2025-09-07 18:53:50 UTC] ; stop_time=[Sun 2025-09-07 18:53:50 UTC] ; pid=27651 ; code=exited ; status=0 }",
+        "ExecStartPreEx": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -t ; flags= ; start_time=[Sun 2025-09-07 18:53:50 UTC] ; stop_time=[Sun 2025-09-07 18:53:50 UTC] ; pid=27651 ; code=exited ; status=0 }",
+        "ExitType": "main",
+        "FailureAction": "none",
+        "FileDescriptorStoreMax": "0",
+        "FinalKillSignal": "9",
+        "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+        "FreezerState": "running",
+        "GID": "[not set]",
+        "GuessMainPID": "yes",
+        "IOAccounting": "no",
+        "IOReadBytes": "18446744073709551615",
+        "IOReadOperations": "18446744073709551615",
+        "IOSchedulingClass": "2",
+        "IOSchedulingPriority": "4",
+        "IOWeight": "[not set]",
+        "IOWriteBytes": "18446744073709551615",
+        "IOWriteOperations": "18446744073709551615",
+        "IPAccounting": "no",
+        "IPEgressBytes": "[no data]",
+        "IPEgressPackets": "[no data]",
+        "IPIngressBytes": "[no data]",
+        "IPIngressPackets": "[no data]",
+        "Id": "nginx.service",
+        "IgnoreOnIsolate": "no",
+        "IgnoreSIGPIPE": "yes",
+        "InactiveEnterTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "InactiveEnterTimestampMonotonic": "2702430826",
+        "InactiveExitTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "InactiveExitTimestampMonotonic": "2702435996",
+        "InvocationID": "164d7c6e0760430b990f8803a5a4eb1e",
+        "JobRunningTimeoutUSec": "infinity",
+        "JobTimeoutAction": "none",
+        "JobTimeoutUSec": "infinity",
+        "KeyringMode": "private",
+        "KillMode": "mixed",
+        "KillSignal": "3",
+        "LimitAS": "infinity",
+        "LimitASSoft": "infinity",
+        "LimitCORE": "infinity",
+        "LimitCORESoft": "infinity",
+        "LimitCPU": "infinity",
+        "LimitCPUSoft": "infinity",
+        "LimitDATA": "infinity",
+        "LimitDATASoft": "infinity",
+        "LimitFSIZE": "infinity",
+        "LimitFSIZESoft": "infinity",
+        "LimitLOCKS": "infinity",
+        "LimitLOCKSSoft": "infinity",
+        "LimitMEMLOCK": "8388608",
+        "LimitMEMLOCKSoft": "8388608",
+        "LimitMSGQUEUE": "819200",
+        "LimitMSGQUEUESoft": "819200",
+        "LimitNICE": "0",
+        "LimitNICESoft": "0",
+        "LimitNOFILE": "524288",
+        "LimitNOFILESoft": "1024",
+        "LimitNPROC": "2651",
+        "LimitNPROCSoft": "2651",
+        "LimitRSS": "infinity",
+        "LimitRSSSoft": "infinity",
+        "LimitRTPRIO": "0",
+        "LimitRTPRIOSoft": "0",
+        "LimitRTTIME": "infinity",
+        "LimitRTTIMESoft": "infinity",
+        "LimitSIGPENDING": "2651",
+        "LimitSIGPENDINGSoft": "2651",
+        "LimitSTACK": "infinity",
+        "LimitSTACKSoft": "8388608",
+        "LoadState": "loaded",
+        "LockPersonality": "no",
+        "LogLevelMax": "-1",
+        "LogRateLimitBurst": "0",
+        "LogRateLimitIntervalUSec": "0",
+        "LogsDirectoryMode": "0755",
+        "MainPID": "27653",
+        "ManagedOOMMemoryPressure": "auto",
+        "ManagedOOMMemoryPressureLimit": "0",
+        "ManagedOOMPreference": "none",
+        "ManagedOOMSwap": "auto",
+        "MemoryAccounting": "yes",
+        "MemoryAvailable": "infinity",
+        "MemoryCurrent": "2146304",
+        "MemoryDenyWriteExecute": "no",
+        "MemoryHigh": "infinity",
+        "MemoryLimit": "infinity",
+        "MemoryLow": "0",
+        "MemoryMax": "infinity",
+        "MemoryMin": "0",
+        "MemorySwapMax": "infinity",
+        "MountAPIVFS": "no",
+        "NFileDescriptorStore": "0",
+        "NRestarts": "0",
+        "NUMAPolicy": "n/a",
+        "Names": "nginx.service",
+        "NeedDaemonReload": "no",
+        "Nice": "0",
+        "NoNewPrivileges": "no",
+        "NonBlocking": "no",
+        "NotifyAccess": "none",
+        "OOMPolicy": "stop",
+        "OOMScoreAdjust": "0",
+        "OnFailureJobMode": "replace",
+        "OnSuccessJobMode": "fail",
+        "PIDFile": "/run/nginx.pid",
+        "Perpetual": "no",
+        "PrivateDevices": "no",
+        "PrivateIPC": "no",
+        "PrivateMounts": "no",
+        "PrivateNetwork": "no",
+        "PrivateTmp": "yes",
+        "PrivateUsers": "no",
+        "ProcSubset": "all",
+        "ProtectClock": "no",
+        "ProtectControlGroups": "no",
+        "ProtectHome": "no",
+        "ProtectHostname": "no",
+        "ProtectKernelLogs": "no",
+        "ProtectKernelModules": "no",
+        "ProtectKernelTunables": "no",
+        "ProtectProc": "default",
+        "ProtectSystem": "no",
+        "RefuseManualStart": "no",
+        "RefuseManualStop": "no",
+        "ReloadResult": "success",
+        "ReloadSignal": "1",
+        "RemainAfterExit": "no",
+        "RemoveIPC": "no",
+        "Requires": "system.slice sysinit.target -.mount",
+        "RequiresMountsFor": "/var/tmp",
+        "Restart": "no",
+        "RestartKillSignal": "3",
+        "RestartUSec": "100ms",
+        "RestrictNamespaces": "no",
+        "RestrictRealtime": "no",
+        "RestrictSUIDSGID": "no",
+        "Result": "success",
+        "RootDirectoryStartOnly": "no",
+        "RuntimeDirectoryMode": "0755",
+        "RuntimeDirectoryPreserve": "no",
+        "RuntimeMaxUSec": "infinity",
+        "RuntimeRandomizedExtraUSec": "0",
+        "SameProcessGroup": "no",
+        "SecureBits": "0",
+        "SendSIGHUP": "no",
+        "SendSIGKILL": "yes",
+        "Slice": "system.slice",
+        "StandardError": "inherit",
+        "StandardInput": "null",
+        "StandardOutput": "journal",
+        "StartLimitAction": "none",
+        "StartLimitBurst": "5",
+        "StartLimitIntervalUSec": "10s",
+        "StartupBlockIOWeight": "[not set]",
+        "StartupCPUShares": "[not set]",
+        "StartupCPUWeight": "[not set]",
+        "StartupIOWeight": "[not set]",
+        "StateChangeTimestamp": "Sun 2025-09-07 18:53:50 UTC",
+        "StateChangeTimestampMonotonic": "2702457799",
+        "StateDirectoryMode": "0755",
+        "StatusErrno": "0",
+        "StopWhenUnneeded": "no",
+        "SubState": "running",
+        "SuccessAction": "none",
+        "SyslogFacility": "3",
+        "SyslogLevel": "6",
+        "SyslogLevelPrefix": "yes",
+        "SyslogPriority": "30",
+        "SystemCallErrorNumber": "2147483646",
+        "TTYReset": "no",
+        "TTYVHangup": "no",
+        "TTYVTDisallocate": "no",
+        "TasksAccounting": "yes",
+        "TasksCurrent": "2",
+        "TasksMax": "4242",
+        "TimeoutAbortUSec": "5s",
+        "TimeoutCleanUSec": "infinity",
+        "TimeoutStartFailureMode": "terminate",
+        "TimeoutStartUSec": "1min 30s",
+        "TimeoutStopFailureMode": "terminate",
+        "TimeoutStopUSec": "5s",
+        "TimerSlackNSec": "50000",
+        "Transient": "no",
+        "Type": "forking",
+        "UID": "[not set]",
+        "UMask": "0022",
+        "UnitFilePreset": "disabled",
+        "UnitFileState": "enabled",
+        "UtmpMode": "init",
+        "WantedBy": "multi-user.target",
+        "Wants": "network-online.target",
+        "WatchdogSignal": "6",
+        "WatchdogTimestampMonotonic": "0",
+        "WatchdogUSec": "0"
+    }
+}
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ ansible nginx -m shell -a "curl -I http://localhost:8080" -e "ansible_ssh_pass=vagrant"
+[WARNING]: Consider using the get_url or uri module rather than running 'curl'.  If you need to use command because
+get_url or uri is insufficient you can add 'warn: false' to this command task or set 'command_warnings=False' in
+ansible.cfg to get rid of this message.
+[WARNING]: Platform linux on host nginx is using the discovered Python interpreter at /usr/bin/python, but future
+installation of another Python interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible/2.10/reference_appendices/interpreter_discovery.html for more information.
+nginx | CHANGED | rc=0 >>
+HTTP/1.1 200 OK
+Server: nginx/1.20.1
+Date: Sun, 07 Sep 2025 19:07:06 GMT
+Content-Type: text/html
+Content-Length: 7620
+Last-Modified: Sat, 17 May 2025 02:45:05 GMT
+Connection: keep-alive
+ETag: "6827f831-1dc4"
+Accept-Ranges: bytes  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0  7620    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+
+
+
+eroticer@eroticer-Nitro-AN515-55:~/vagrant-vm$ curl -I http://192.168.121.6:8080
+HTTP/1.1 200 OK
+Server: nginx/1.20.1
+Date: Sun, 07 Sep 2025 19:07:29 GMT
+Content-Type: text/html
+Content-Length: 7620
+Last-Modified: Sat, 17 May 2025 02:45:05 GMT
+Connection: keep-alive
+ETag: "6827f831-1dc4"
+Accept-Ranges: bytes
+
+
