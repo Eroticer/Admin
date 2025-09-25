@@ -1,0 +1,188 @@
+---
+- name: Configure PAM restrictions and Docker access
+  hosts: all
+  become: yes
+  vars:
+    admin_group: "wheel"
+    restricted_user: "devuser"
+    docker_user: "dockeruser"
+    holiday_dates:
+      - "0101"  # 1 января
+      - "0308"  # 8 марта
+      - "0501"  # 1 мая
+      - "0509"  # 9 мая
+      - "0612"  # 12 июня
+      - "1104"  # 4 ноября
+
+  tasks:
+    # Установка необходимых пакетов
+    - name: Install required packages
+      yum:
+        name:
+          - pam
+          - docker
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    # Создание групп пользователей
+    - name: Create admin group if not exists
+      group:
+        name: "{{ admin_group }}"
+        state: present
+
+    # Создание тестовых пользователей
+    - name: Create restricted user
+      user:
+        name: "{{ restricted_user }}"
+        password: "{{ 'password123' | password_hash('sha512') }}"
+        groups: "users"
+        shell: /bin/bash
+        state: present
+
+    - name: Create docker user
+      user:
+        name: "{{ docker_user }}"
+        password: "{{ 'dockerpass' | password_hash('sha512') }}"
+        groups: "users"
+        shell: /bin/bash
+        state: present
+
+    # Добавление пользователя в группу docker
+    - name: Add user to docker group
+      user:
+        name: "{{ docker_user }}"
+        groups: "docker"
+        append: yes
+
+    # Создание скрипта для проверки праздничных дней
+    - name: Create holiday check script
+      copy:
+        content: |
+          #!/bin/bash
+          # Скрипт проверки праздничных дней
+          TODAY=$(date +%m%d)
+          HOLIDAYS="{{ holiday_dates | join(' ') }}"
+          
+          for holiday in $HOLIDAYS; do
+            if [ "$TODAY" == "$holiday" ]; then
+              exit 1  # Выход с кодом 1 означает праздничный день
+            fi
+          done
+          exit 0  # Выход с кодом 0 означает рабочий день
+        dest: /usr/local/bin/holiday_check.sh
+        owner: root
+        group: root
+        mode: 0755
+
+    # Настройка PAM для ограничения доступа по выходным
+    - name: Configure PAM time restrictions
+      copy:
+        content: |
+          # Ограничение доступа по времени
+          # Запрет входа в выходные дни для всех, кроме группы {{ admin_group }}
+          *;*;*;!Wd0000-2400;!Al0000-2400 & !{{ admin_group }}
+        dest: /etc/security/time.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Copy Docker access management script
+      copy:
+        src: scripts/docker_access.sh
+        dest: /usr/local/bin/docker_access.sh
+        owner: root
+        group: root
+        mode: 0755
+
+    # Создание задачи cron для регулярной проверки доступа
+    - name: Schedule Docker access monitoring
+      cron:
+        name: "Docker access monitoring"
+        minute: "0"
+        hour: "*/6"
+        job: "/usr/local/bin/docker_access.sh {{ docker_user }}"
+        user: root
+    # Настройка PAM для использования модуля time
+    - name: Configure PAM for SSH access control
+      lineinfile:
+        path: /etc/pam.d/sshd
+        line: "account    required     pam_time.so"
+        insertafter: '#%PAM-1.0'
+        state: present
+
+    # Настройка sudo прав для пользователя Docker
+    - name: Configure Docker user sudo rights
+      copy:
+        content: |
+          # Права для пользователя {{ docker_user }}
+          {{ docker_user }} ALL=(root) NOPASSWD: /bin/systemctl restart docker, /bin/systemctl status docker
+        dest: /etc/sudoers.d/{{ docker_user }}
+        owner: root
+        group: root
+        mode: 0440
+
+    # Запуск и включение Docker服务
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Настройка политики SELinux для Docker (если SELinux включен)
+    - name: Set SELinux policy for Docker
+      seboolean:
+        name: docker_execstream
+        state: yes
+        persistent: yes
+      when: ansible_selinux.status == "enabled"
+
+    # Создание тестового контейнера для проверки
+    - name: Pull test Docker image
+      docker_image:
+        name: alpine
+        tag: latest
+        source: pull
+
+    # Настройка SSH для парольной аутентификации
+    - name: Configure SSH for password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      with_items:
+        - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication yes' }
+        - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+      notify: restart sshd
+
+    # Создание информационного файла
+    - name: Create info file
+      copy:
+        content: |
+          Лабораторная работа по PAM
+          =========================
+          
+          Созданные пользователи:
+          - {{ restricted_user }} (ограниченный доступ) - пароль: password123
+          - {{ docker_user }} (доступ к Docker) - пароль: dockerpass
+          
+          Группа администраторов: {{ admin_group }}
+          
+          Ограничения:
+          - Обычные пользователи не могут войти в систему по выходным (суббота, воскресенье)
+          - Исключение: праздничные дни
+          - Пользователь {{ docker_user }} имеет права на управление Docker
+          
+          Праздничные дни: {{ holiday_dates | join(', ') }}
+        dest: /home/info.txt
+        owner: root
+        group: root
+        mode: 0644
+
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
