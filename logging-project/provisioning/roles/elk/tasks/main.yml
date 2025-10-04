@@ -1,0 +1,126 @@
+---
+- name: Install Docker prerequisites
+  dnf:
+    name:
+      - docker
+      - docker-compose-plugin
+    state: present
+
+- name: Start and enable Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Create ELK directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - /opt/elk
+    - /opt/elk/elasticsearch
+    - /opt/elk/logstash
+    - /opt/elk/kibana
+
+- name: Create docker-compose file for ELK
+  copy:
+    content: |
+      version: '3.7'
+      services:
+        elasticsearch:
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+          container_name: elasticsearch
+          environment:
+            - discovery.type=single-node
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+          volumes:
+            - ./elasticsearch:/usr/share/elasticsearch/data
+          ports:
+            - 9200:9200
+          networks:
+            - elk
+
+        logstash:
+          image: docker.elastic.co/logstash/logstash:7.17.0
+          container_name: logstash
+          volumes:
+            - ./logstash/pipeline:/usr/share/logstash/pipeline
+          ports:
+            - 5044:5044
+            - 5000:5000/tcp
+            - 5000:5000/udp
+          environment:
+            LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+          networks:
+            - elk
+          depends_on:
+            - elasticsearch
+
+        kibana:
+          image: docker.elastic.co/kibana/kibana:7.17.0
+          container_name: kibana
+          ports:
+            - 5601:5601
+          environment:
+            ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+          networks:
+            - elk
+          depends_on:
+            - elasticsearch
+
+      networks:
+        elk:
+          driver: bridge
+    dest: /opt/elk/docker-compose.yml
+
+- name: Create Logstash pipeline directory
+  file:
+    path: /opt/elk/logstash/pipeline
+    state: directory
+
+- name: Create Logstash pipeline config
+  copy:
+    content: |
+      input {
+        tcp {
+          port => 5000
+          type => "nginx"
+        }
+      }
+      
+      filter {
+        if [type] == "nginx" {
+          grok {
+            match => { "message" => "%{COMBINEDAPACHELOG}" }
+          }
+          date {
+            match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+          }
+        }
+      }
+      
+      output {
+        elasticsearch {
+          hosts => ["elasticsearch:9200"]
+          index => "nginx-%{+YYYY.MM.dd}"
+        }
+        stdout { codec => rubydebug }
+      }
+    dest: /opt/elk/logstash/pipeline/logstash.conf
+
+- name: Start ELK stack
+  command: docker compose up -d
+  args:
+    chdir: /opt/elk
+
+- name: Configure firewall for ELK
+  firewalld:
+    port: "{{ item }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+  loop:
+    - 5601/tcp
+    - 9200/tcp
+    - 5044/tcp

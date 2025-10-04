@@ -1,0 +1,41 @@
+# Rsyslog configuration file
+
+$ModLoad imuxsock
+$ModLoad imjournal
+$ModLoad imtcp
+$ModLoad imudp
+
+$InputTCPServerRun 514
+$InputUDPServerRun 514
+
+$WorkDirectory /var/lib/rsyslog
+$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+
+$IncludeConfig /etc/rsyslog.d/*.conf
+
+# Templates for remote logs
+$Template RemoteLogs, "/var/log/rsyslog/%HOSTNAME%/%PROGRAMNAME%.log"
+*.* ?RemoteLogs
+
+# Specific templates for nginx
+$Template nginx_access, "/var/log/rsyslog/%HOSTNAME%/nginx_access.log"
+if $programname == 'nginx_access' then ?nginx_access
+& stop
+
+$Template nginx_error, "/var/log/rsyslog/%HOSTNAME%/nginx_error.log"
+if $programname == 'nginx_error' then ?nginx_error
+& stop
+
+# Template for audit logs
+$Template audit_log, "/var/log/rsyslog/%HOSTNAME%/audit.log"
+if $programname == 'audit' then ?audit_log
+& stop
+
+# Local logging rules
+*.info;mail.none;authpriv.none;cron.none;local6.none    /var/log/messages
+authpriv.*                                              /var/log/secure
+mail.*                                                  -/var/log/maillog
+cron.*                                                  /var/log/cron
+*.emerg                                                 :omusrmsg:*
+uucp,news.crit                                          /var/log/spooler
+local7.*                                                /var/log/boot.log

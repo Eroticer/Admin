@@ -1,0 +1,30 @@
+all:
+  hosts:
+    web:
+      ansible_host: 192.168.56.10
+      ansible_user: vagrant
+      ansible_become: yes
+      ansible_become_user: root
+    log:
+      ansible_host: 192.168.56.20
+      ansible_user: vagrant
+      ansible_become: yes
+      ansible_become_user: root
+    elk:
+      ansible_host: 192.168.56.30
+      ansible_user: vagrant
+      ansible_become: yes
+      ansible_become_user: root
+  children:
+    web_servers:
+      hosts:
+        web:
+    rsyslog_servers:
+      hosts:
+        log:
+    rsyslog_clients:
+      hosts:
+        web:
+    elk_servers:
+      hosts:
+        elk:

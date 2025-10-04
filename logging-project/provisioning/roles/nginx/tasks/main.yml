@@ -1,0 +1,50 @@
+---
+- name: Add Nginx repository
+  yum_repository:
+    name: nginx
+    description: Nginx repository
+    baseurl: http://nginx.org/packages/rockylinux/$releasever/$basearch/
+    gpgcheck: yes
+    gpgkey: https://nginx.org/keys/nginx_signing.key
+    enabled: yes
+
+- name: Install Nginx
+  dnf:
+    name: nginx
+    state: present
+
+- name: Configure Nginx logging
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    backup: yes
+  notify: restart nginx
+
+- name: Create test page
+  copy:
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Test Page</title>
+      </head>
+      <body>
+          <h1>Welcome to Nginx on Rocky Linux</h1>
+          <p>Server: {{ ansible_hostname }}</p>
+      </body>
+      </html>
+    dest: /usr/share/nginx/html/index.html
+    mode: 0644
+
+- name: Ensure Nginx is running
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Configure firewall - allow HTTP
+  firewalld:
+    service: http
+    state: enabled
+    permanent: yes
+    immediate: yes

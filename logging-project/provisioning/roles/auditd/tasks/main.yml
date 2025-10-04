@@ -1,0 +1,50 @@
+---
+- name: Install auditd
+  dnf:
+    name: audit
+    state: present
+
+- name: Configure audit rules for nginx configs
+  copy:
+    content: |
+      -w /etc/nginx/ -p wa -k nginx_config
+      -w /etc/nginx/nginx.conf -p wa -k nginx_config
+      -w /etc/nginx/conf.d/ -p wa -k nginx_config
+    dest: /etc/audit/rules.d/nginx.rules
+    mode: 0644
+
+- name: Configure auditd for remote logging
+  lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: '^name_format', line: 'name_format = hostname' }
+    - { regexp: '^disp_qos', line: 'disp_qos = lossy' }
+
+- name: Configure audit logs to be sent via rsyslog
+  copy:
+    content: |
+      # Send audit logs to remote syslog server
+      $ModLoad imfile
+      $InputFileName /var/log/audit/audit.log
+      $InputFileTag audit:
+      $InputFileStateFile audit-log
+      $InputFileSeverity info
+      $InputFileFacility local6
+      $InputRunFileMonitor
+      local6.* @@192.168.56.20:514
+    dest: /etc/rsyslog.d/audit.conf
+    mode: 0644
+  notify: restart rsyslog
+
+- name: Ensure auditd is running
+  systemd:
+    name: auditd
+    state: started
+    enabled: yes
+
+- name: Restart auditd to apply new rules
+  systemd:
+    name: auditd
+    state: restarted

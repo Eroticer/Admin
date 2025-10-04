@@ -1,0 +1,20 @@
+---
+- name: Configure all hosts
+  hosts: all
+  become: yes
+  roles:
+    - common
+
+- name: Configure web server
+  hosts: web
+  become: yes
+  roles:
+    - nginx
+    - rsyslog-client
+    - auditd
+
+- name: Configure rsyslog server
+  hosts: log
+  become: yes
+  roles:
+    - rsyslog-server

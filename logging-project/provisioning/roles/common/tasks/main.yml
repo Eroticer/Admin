@@ -1,0 +1,54 @@
+---
+- name: Install EPEL repository
+  dnf:
+    name: epel-release
+    state: present
+
+- name: Update all packages
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Install common packages
+  dnf:
+    name:
+      - wget
+      - curl
+      - vim
+      - htop
+      - net-tools
+      - bind-utils
+    state: present
+
+- name: Configure timezone
+  timezone:
+    name: Europe/Moscow
+
+- name: Install chrony
+  dnf:
+    name: chrony
+    state: present
+
+- name: Ensure chrony is running
+  systemd:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: Install firewalld
+  dnf:
+    name: firewalld
+    state: present
+
+- name: Ensure firewalld is running
+  systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Configure firewall - allow SSH
+  firewalld:
+    service: ssh
+    state: enabled
+    permanent: yes
+    immediate: yes

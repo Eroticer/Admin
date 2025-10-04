@@ -1,0 +1,35 @@
+---
+- name: Install rsyslog
+  dnf:
+    name: rsyslog
+    state: present
+
+- name: Configure rsyslog as server
+  template:
+    src: rsyslog.conf.j2
+    dest: /etc/rsyslog.conf
+    backup: yes
+  notify: restart rsyslog
+
+- name: Create directory structure for logs
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - /var/log/rsyslog
+    - /var/log/rsyslog/web
+    - /var/log/rsyslog/audit
+
+- name: Configure firewall - allow rsyslog
+  firewalld:
+    port: 514/tcp
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Ensure rsyslog is running
+  systemd:
+    name: rsyslog
+    state: started
+    enabled: yes
