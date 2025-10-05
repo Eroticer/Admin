@@ -1,0 +1,10 @@
+---
+- name: Debug connection
+  hosts: all
+  tasks:
+    - name: Test connection
+      ping:
+    
+    - name: Show facts
+      debug:
+        var: ansible_facts

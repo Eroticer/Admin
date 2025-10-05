@@ -1,0 +1,191 @@
+---
+- name: Install EPEL repository
+  dnf:
+    name: epel-release
+    state: present
+
+- name: Install required packages including sshpass
+  dnf:
+    name:
+      - borgbackup
+      - sshpass
+    state: present
+
+- name: Wait for backup server SSH
+  wait_for:
+    host: "{{ backup_server_ip }}"
+    port: 22
+    delay: 10
+    timeout: 120
+    state: started
+
+- name: Generate SSH key pair for borg
+  become: yes
+  become_user: vagrant
+  openssh_keypair:
+    path: /home/vagrant/.ssh/borg_key
+    type: rsa
+    size: 4096
+    state: present
+
+- name: Copy public key to backup server using sshpass
+  shell: |
+    sshpass -p 'vagrant' ssh-copy-id -o StrictHostKeyChecking=no -i /home/vagrant/.ssh/borg_key.pub borg@{{ backup_server_ip }}
+  become: yes
+  become_user: vagrant
+  environment:
+    SSHPASS: 'vagrant'
+  args:
+    creates: /home/vagrant/.ssh/borg_key_copied
+
+- name: Create key copied marker
+  file:
+    path: /home/vagrant/.ssh/borg_key_copied
+    state: touch
+    owner: vagrant
+    group: vagrant
+    mode: '0600'
+
+- name: Test SSH connection to backup server with borg key
+  command: ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i /home/vagrant/.ssh/borg_key borg@{{ backup_server_ip }} "echo 'SSH connection successful'"
+  register: ssh_test
+  changed_when: false
+  become: yes
+  become_user: vagrant
+  retries: 3
+  delay: 10
+  until: ssh_test.rc == 0
+
+- name: Initialize Borg repository
+  command: >
+    borg init
+    --encryption=repokey
+    -v
+    borg@{{ backup_server_ip }}:/var/backup/
+  environment:
+    BORG_PASSPHRASE: "{{ borg_passphrase }}"
+  become: yes
+  become_user: vagrant
+  args:
+    creates: /home/vagrant/.borg_initialized
+  register: borg_init
+
+- name: Create initialization marker
+  file:
+    path: /home/vagrant/.borg_initialized
+    state: touch
+  when: borg_init.changed
+  become: yes
+  become_user: vagrant
+
+- name: Create backup script directory
+  file:
+    path: /opt/backup
+    state: directory
+    mode: '0755'
+
+- name: Copy backup script
+  copy:
+    src: ../../../../scripts/backup.sh
+    dest: /opt/backup/backup.sh
+    mode: '0755'
+
+- name: Update backup script with correct IP
+  lineinfile:
+    path: /opt/backup/backup.sh
+    regexp: '^REPO='
+    line: 'REPO="borg@{{ backup_server_ip }}:/var/backup/"'
+    backrefs: yes
+
+- name: Update backup script with passphrase
+  lineinfile:
+    path: /opt/backup/backup.sh
+    regexp: '^export BORG_PASSPHRASE='
+    line: 'export BORG_PASSPHRASE="{{ borg_passphrase }}"'
+    backrefs: yes
+
+- name: Update backup script with SSH key path
+  lineinfile:
+    path: /opt/backup/backup.sh
+    regexp: '^SSH_KEY='
+    line: 'SSH_KEY="/home/vagrant/.ssh/borg_key"'
+    backrefs: yes
+
+- name: Deploy systemd service
+  copy:
+    content: |
+      [Unit]
+      Description=Borg Backup
+      Documentation=man:borg(1)
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      User=root
+      Environment="BORG_RSH=ssh -i /home/vagrant/.ssh/borg_key -o StrictHostKeyChecking=no"
+      Environment="BORG_PASSPHRASE=Otus1234"
+      ExecStart=/opt/backup/backup.sh
+      Nice=19
+      IOSchedulingClass=2
+      IOSchedulingPriority=7
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/borg-backup.service
+    mode: '0644'
+
+- name: Deploy systemd timer
+  copy:
+    content: |
+      [Unit]
+      Description=Borg Backup Timer
+      Requires=borg-backup.service
+
+      [Timer]
+      OnCalendar=*:0/5
+      Persistent=true
+      RandomizedDelaySec=30
+
+      [Install]
+      WantedBy=timers.target
+    dest: /etc/systemd/system/borg-backup.timer
+    mode: '0644'
+
+- name: Configure log rotation
+  copy:
+    content: |
+      /var/log/borg-backup.log {
+          daily
+          rotate 7
+          compress
+          delaycompress
+          missingok
+          notifempty
+          create 644 root root
+      }
+    dest: /etc/logrotate.d/borg-backup
+    mode: '0644'
+
+- name: Create log file
+  file:
+    path: /var/log/borg-backup.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and start borg backup timer
+  systemd:
+    name: borg-backup.timer
+    enabled: yes
+    state: started
+
+- name: Ensure SSH service is started and enabled
+  systemd:
+    name: sshd
+    state: started
+    enabled: yes

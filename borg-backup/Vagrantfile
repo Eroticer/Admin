@@ -1,0 +1,40 @@
+Vagrant.configure("2") do |config|
+  config.vm.synced_folder ".", "/vagrant", type: "rsync"
+  
+  config.vm.define "backup-server" do |backup|
+    backup.vm.box = "centos/stream9"
+    backup.vm.hostname = "backup-server"
+    backup.vm.network "private_network", ip: "192.168.100.160"
+    
+    backup.vm.provider :libvirt do |libvirt|
+      libvirt.memory = 1024
+      libvirt.cpus = 1
+      libvirt.driver = "kvm"
+      libvirt.nested = true
+      libvirt.storage_pool_name = "default"
+    end
+  end
+
+  config.vm.define "client-machine" do |client|
+    client.vm.box = "centos/stream9"
+    client.vm.hostname = "client-machine"
+    client.vm.network "private_network", ip: "192.168.100.150"
+    
+    client.vm.provider :libvirt do |libvirt|
+      libvirt.memory = 1024
+      libvirt.cpus = 1
+      libvirt.driver = "kvm"
+      libvirt.nested = true
+      libvirt.storage_pool_name = "default"
+    end
+  end
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "ansible/site.yml"
+    ansible.inventory_path = "ansible/inventory"
+    ansible.become = true
+    ansible.extra_vars = {
+      ansible_python_interpreter: "/usr/bin/python3"
+    }
+  end
+end

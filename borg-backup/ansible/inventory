@@ -1,0 +1,10 @@
+[backup-server]
+192.168.100.160 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_key ansible_become=yes
+
+[client-machine]
+192.168.100.150 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_key ansible_become=yes
+
+[all:vars]
+borg_passphrase=Otus1234
+ansible_python_interpreter=/usr/bin/python3
+backup_server_ip=192.168.100.160

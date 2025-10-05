@@ -1,0 +1,37 @@
+---
+- name: Install minimal packages
+  dnf:
+    name:
+      - borgbackup
+      - openssh-server
+    state: present
+
+- name: Create borg user and setup
+  user:
+    name: borg
+    shell: /bin/bash
+    home: /home/borg
+    system: yes
+    create_home: yes
+
+- name: Setup SSH directory
+  file:
+    path: /home/borg/.ssh
+    state: directory
+    owner: borg
+    group: borg
+    mode: '0700'
+
+- name: Create backup directory
+  file:
+    path: /var/backup
+    state: directory
+    owner: borg
+    group: borg
+    mode: '0755'
+
+- name: Start SSH service
+  systemd:
+    name: sshd
+    state: started
+    enabled: yes

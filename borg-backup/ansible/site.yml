@@ -1,0 +1,10 @@
+---
+- name: Configure backup server first
+  hosts: backup-server
+  roles:
+    - backup-server
+
+- name: Configure client after backup is ready
+  hosts: client-machine
+  roles:
+    - client
