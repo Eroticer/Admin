@@ -1,0 +1,7 @@
+<network>
+    <name>office1-net</name>
+    <bridge name='virbr-office1'/>
+    <forward mode='route'/>
+    <ip address='192.168.2.193' netmask='255.255.255.192'>
+    </ip>
+</network>

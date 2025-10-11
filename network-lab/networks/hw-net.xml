@@ -1,0 +1,8 @@
+<network>
+    <name>hw-net</name>
+    <uuid>8c2da7f4-2a3e-4d69-9eb0-3c4d5e6f7081</uuid>
+    <bridge name='virbr-hw'/>
+    <forward mode='route'/>
+    <ip address='192.168.0.33' netmask='255.255.255.240'>
+    </ip>
+</network>

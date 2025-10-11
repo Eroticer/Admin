@@ -1,0 +1,7 @@
+<network>
+    <name>office2-central</name>
+    <bridge name='virbr-o2c'/>
+    <forward mode='route'/>
+    <ip address='192.168.255.5' netmask='255.255.255.252'>
+    </ip>
+</network>

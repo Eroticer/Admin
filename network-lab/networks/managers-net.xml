@@ -1,0 +1,7 @@
+<network>
+    <name>managers-net</name>
+    <bridge name='virbr-managers'/>
+    <forward mode='route'/>
+    <ip address='192.168.2.129' netmask='255.255.255.192'>
+    </ip>
+</network>

@@ -1,0 +1,7 @@
+<network>
+    <name>test2-net</name>
+    <bridge name='virbr-test2'/>
+    <forward mode='route'/>
+    <ip address='192.168.1.129' netmask='255.255.255.192'>
+    </ip>
+</network>

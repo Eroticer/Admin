@@ -1,0 +1,8 @@
+<network>
+    <name>dev1-net</name>
+    <uuid>c6e3ebf8-6e72-4fad-a2f4-708192a3b4c5</uuid>
+    <bridge name='virbr-dev1'/>
+    <forward mode='route'/>
+    <ip address='192.168.2.1' netmask='255.255.255.192'>
+    </ip>
+</network>

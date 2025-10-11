@@ -1,0 +1,8 @@
+<network>
+    <name>test1-net</name>
+    <uuid>d7f4fcf9-7f83-4fbe-a305-8192a3b4c5d6</uuid>
+    <bridge name='virbr-test1'/>
+    <forward mode='route'/>
+    <ip address='192.168.2.65' netmask='255.255.255.192'>
+    </ip>
+</network>

@@ -1,0 +1,8 @@
+<network>
+    <name>dir-net</name>
+    <uuid>7b1c96f3-192d-4c58-9daf-2b3c4d5e6f70</uuid>
+    <bridge name='virbr-dir'/>
+    <forward mode='route'/>
+    <ip address='192.168.0.1' netmask='255.255.255.240'>
+    </ip>
+</network>

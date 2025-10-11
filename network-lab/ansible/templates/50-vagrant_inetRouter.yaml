@@ -1,0 +1,10 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp1s0:  # router-net
+      addresses:
+      - 192.168.255.1/30
+    enp7s0:  # management
+      addresses:
+      - 192.168.50.10/24

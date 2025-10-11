@@ -1,0 +1,138 @@
+network_interfaces:
+  inetRouter:
+    - interface: eth1
+      ip: 192.168.255.1
+      netmask: 255.255.255.252
+      network: router-net
+    - interface: eth2
+      ip: 192.168.50.10
+      netmask: 255.255.255.0
+      network: management
+
+  centralRouter:
+    - interface: eth1
+      ip: 192.168.255.2
+      netmask: 255.255.255.252
+      network: router-net
+      routes:
+        - "0.0.0.0/0 via 192.168.255.1"
+    - interface: eth2
+      ip: 192.168.0.1
+      netmask: 255.255.255.240
+      network: dir-net
+    - interface: eth3
+      ip: 192.168.0.33
+      netmask: 255.255.255.240
+      network: hw-net
+    - interface: eth4
+      ip: 192.168.0.65
+      netmask: 255.255.255.192
+      network: mgt-net
+    - interface: eth5
+      ip: 192.168.255.9
+      netmask: 255.255.255.252
+      network: office1-central
+      routes:
+        - "192.168.2.0/24 via 192.168.255.10"
+    - interface: eth6
+      ip: 192.168.255.5
+      netmask: 255.255.255.252
+      network: office2-central
+      routes:
+        - "192.168.1.0/24 via 192.168.255.6"
+    - interface: eth7
+      ip: 192.168.50.11
+      netmask: 255.255.255.0
+      network: management
+
+  centralServer:
+    - interface: eth1
+      ip: 192.168.0.2
+      netmask: 255.255.255.240
+      network: dir-net
+      routes:
+        - "0.0.0.0/0 via 192.168.0.1"
+    - interface: eth2
+      ip: 192.168.50.12
+      netmask: 255.255.255.0
+      network: management
+
+  office1Router:
+    - interface: eth1
+      ip: 192.168.255.10
+      netmask: 255.255.255.252
+      network: office1-central
+      routes:
+        - "0.0.0.0/0 via 192.168.255.9"
+        - "192.168.0.0/24 via 192.168.255.9"
+        - "192.168.1.0/24 via 192.168.255.9"
+    - interface: eth2
+      ip: 192.168.2.1
+      netmask: 255.255.255.192
+      network: dev1-net
+    - interface: eth3
+      ip: 192.168.2.65
+      netmask: 255.255.255.192
+      network: test1-net
+    - interface: eth4
+      ip: 192.168.2.129
+      netmask: 255.255.255.192
+      network: managers-net
+    - interface: eth5
+      ip: 192.168.2.193
+      netmask: 255.255.255.192
+      network: office1-net
+    - interface: eth6
+      ip: 192.168.50.20
+      netmask: 255.255.255.0
+      network: management
+
+  office1Server:
+    - interface: eth1
+      ip: 192.168.2.130
+      netmask: 255.255.255.192
+      network: managers-net
+      routes:
+        - "0.0.0.0/0 via 192.168.2.129"
+    - interface: eth2
+      ip: 192.168.50.21
+      netmask: 255.255.255.0
+      network: management
+
+  office2Router:
+    - interface: eth1
+      ip: 192.168.255.6
+      netmask: 255.255.255.252
+      network: office2-central
+      routes:
+        - "0.0.0.0/0 via 192.168.255.5"
+        - "192.168.0.0/24 via 192.168.255.5"
+        - "192.168.2.0/24 via 192.168.255.5"
+    - interface: eth2
+      ip: 192.168.1.1
+      netmask: 255.255.255.128
+      network: dev2-net
+    - interface: eth3
+      ip: 192.168.1.129
+      netmask: 255.255.255.192
+      network: test2-net
+    - interface: eth4
+      ip: 192.168.1.193
+      netmask: 255.255.255.192
+      network: office2-net
+    - interface: eth5
+      ip: 192.168.50.30
+      netmask: 255.255.255.0
+      network: management
+
+  office2Server:
+    - interface: eth1
+      ip: 192.168.1.2
+      netmask: 255.255.255.128
+      network: dev2-net
+      routes:
+        - "0.0.0.0/0 via 192.168.1.1"
+    - interface: eth2
+      ip: 192.168.50.31
+      netmask: 255.255.255.0
+      network: management

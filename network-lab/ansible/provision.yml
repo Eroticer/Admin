@@ -1,0 +1,136 @@
+---
+- name: Configure network lab
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install required packages
+      dnf:
+        name:
+          - traceroute
+          - tcpdump
+          - net-tools
+          - iptables-services
+          - firewalld
+          - policycoreutils-python-utils
+        state: present
+
+    - name: Stop and disable firewalld
+      service:
+        name: firewalld
+        state: stopped
+        enabled: no
+
+- name: Configure routers
+  hosts: routers
+  become: yes
+
+  tasks:
+    - name: Enable IP forwarding permanently
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: 'net.ipv4.ip_forward=1'
+        state: present
+
+    - name: Apply sysctl settings
+      command: sysctl -p
+
+- name: Configure NAT on inetRouter
+  hosts: inetRouter
+  become: yes
+
+  tasks:
+    - name: Configure iptables for NAT
+      template:
+        src: iptables_rules.ipv4
+        dest: /etc/sysconfig/iptables
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Enable iptables service
+      service:
+        name: iptables
+        state: started
+        enabled: yes
+
+    - name: Apply iptables rules
+      command: iptables-restore < /etc/sysconfig/iptables
+
+- name: Configure basic network interfaces
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install NetworkManager
+      dnf:
+        name: NetworkManager
+        state: present
+
+    - name: Ensure NetworkManager is running
+      service:
+        name: NetworkManager
+        state: started
+        enabled: yes
+
+- name: Configure specific network settings
+  hosts: all
+  become: yes
+  tasks:
+    - name: Configure network interfaces for inetRouter
+      template:
+        src: "ifcfg-eth1.j2"
+        dest: "/etc/sysconfig/network-scripts/ifcfg-eth1"
+        owner: root
+        group: root
+        mode: 0644
+      when: inventory_hostname == "inetRouter"
+
+    - name: Configure network interfaces for centralRouter
+      template:
+        src: "ifcfg-eth1.j2"
+        dest: "/etc/sysconfig/network-scripts/ifcfg-eth1"
+        owner: root
+        group: root
+        mode: 0644
+      when: inventory_hostname == "centralRouter"
+
+    - name: Add default route to centralRouter
+      shell: |
+        nmcli connection modify "Wired connection 1" +ipv4.routes "0.0.0.0/0 192.168.255.1"
+        nmcli connection up "Wired connection 1"
+      when: inventory_hostname == "centralRouter"
+
+    - name: Restart network
+      service:
+        name: NetworkManager
+        state: restarted
+
+- name: Wait for network stabilization
+  hosts: all
+  become: no
+  tasks:
+    - name: Wait for network
+      wait_for_connection:
+        timeout: 60
+
+- name: Final configuration check
+  hosts: all
+  become: yes
+  tasks:
+    - name: Show IP routes
+      command: ip route
+      register: ip_route
+
+    - name: Display routes
+      debug:
+        var: ip_route.stdout
+
+    - name: Show IP addresses
+      command: ip addr show
+      register: ip_addr
+
+    - name: Display IP addresses
+      debug:
+        var: ip_addr.stdout

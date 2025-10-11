@@ -1,0 +1,14 @@
+<network>
+    <name>management</name>
+    <bridge name='virbr-mgmt'/>
+    <forward mode='nat'>
+        <nat>
+            <port start='1024' end='65535'/>
+        </nat>
+    </forward>
+    <ip address='192.168.50.1' netmask='255.255.255.0'>
+        <dhcp>
+            <range start='192.168.50.100' end='192.168.50.200'/>
+        </dhcp>
+    </ip>
+</network>

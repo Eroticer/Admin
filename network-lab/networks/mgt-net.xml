@@ -1,0 +1,8 @@
+<network>
+    <name>mgt-net</name>
+    <uuid>9d3eb8f5-3b4f-4e7a-9fc1-4d5e6f708192</uuid>
+    <bridge name='virbr-mgt'/>
+    <forward mode='route'/>
+    <ip address='192.168.0.65' netmask='255.255.255.192'>
+    </ip>
+</network>

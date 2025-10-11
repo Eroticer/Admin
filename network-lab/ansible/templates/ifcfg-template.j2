@@ -1,0 +1,11 @@
+TYPE=Ethernet
+PROXY_METHOD=none
+BROWSER_ONLY=no
+BOOTPROTO=none
+DEFROUTE=no
+IPADDR={{ item.ip }}
+NETMASK={{ item.netmask }}
+DEVICE={{ item.interface }}
+ONBOOT=yes
+NAME={{ item.interface }}
+ZONE=trusted
