@@ -1,0 +1,18 @@
+# PXE Configuration
+interface=eth1
+bind-interfaces
+
+# DHCP Configuration
+dhcp-range=eth1,10.0.0.100,10.0.0.120,255.255.255.0,12h
+dhcp-option=3,10.0.0.20
+dhcp-option=6,8.8.8.8
+
+# PXE Boot
+dhcp-boot=pxelinux.0
+
+# TFTP Configuration
+enable-tftp
+tftp-root=/srv/tftp/amd64
+
+# Logging
+log-dhcp

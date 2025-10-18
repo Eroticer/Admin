@@ -1,0 +1,95 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - dnsmasq
+      - apache2
+      - wget
+      - cloud-image-utils
+    state: present
+
+- name: Stop and disable UFW
+  systemd:
+    name: ufw
+    state: stopped
+    enabled: no
+
+- name: Create directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - /srv/tftp/amd64
+    - /srv/tftp/amd64/pxelinux.cfg
+    - /srv/images
+    - /srv/ks
+
+- name: Configure dnsmasq for PXE
+  template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/pxe.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart dnsmasq
+
+- name: Configure Apache virtual host
+  template:
+    src: ks-server.conf.j2
+    dest: /etc/apache2/sites-available/ks-server.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable Apache site
+  command: a2ensite ks-server.conf
+  args:
+    creates: /etc/apache2/sites-enabled/ks-server.conf
+
+- name: Disable default Apache site
+  command: a2dissite 000-default.conf
+  ignore_errors: yes
+
+- name: Configure PXE boot menu
+  template:
+    src: pxelinux-default.j2
+    dest: /srv/tftp/amd64/pxelinux.cfg/default
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy autoinstall configuration
+  copy:
+    src: user-data
+    dest: /srv/ks/user-data
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create empty meta-data file
+  file:
+    path: /srv/ks/meta-data
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Start and enable services
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - dnsmasq
+    - apache2
+
+- name: Verify services are running
+  command: systemctl is-active {{ item }}
+  register: service_status
+  failed_when: service_status.rc != 0
+  loop:
+    - dnsmasq
+    - apache2

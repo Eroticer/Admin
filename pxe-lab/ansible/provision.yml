@@ -1,0 +1,29 @@
+---
+- name: Configure PXE Server
+  hosts: pxe_servers
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+  roles:
+    - pxe-server
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: |
+          PXE Server configuration completed!
+          Server IP: 10.0.0.20
+          DHCP Range: 10.0.0.100-10.0.0.120
+          TFTP Root: /srv/tftp/amd64
+          Web Server: http://10.0.0.20/
+          
+          Next steps:
+          1. Download Ubuntu ISO: sudo wget -O /srv/images/ubuntu-22.04-live-server-amd64.iso http://releases.ubuntu.com/22.04/ubuntu-22.04-live-server-amd64.iso
+          2. Download netboot files: sudo wget -O /tmp/netboot.tar.gz http://archive.ubuntu.com/ubuntu/dists/jammy/main/installer-amd64/current/images/netboot/netboot.tar.gz
+          3. Extract netboot: sudo tar -xzf /tmp/netboot.tar.gz -C /srv/tftp/amd64

@@ -1,0 +1,23 @@
+<VirtualHost *:80>
+    ServerName pxe-server
+    DocumentRoot /
+    
+    # Autoinstall files
+    Alias /ks /srv/ks
+    <Directory /srv/ks>
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+    
+    # ISO images
+    Alias /images /srv/images
+    <Directory /srv/images>
+        Options Indexes FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+    
+    ErrorLog ${APACHE_LOG_DIR}/pxe_error.log
+    CustomLog ${APACHE_LOG_DIR}/pxe_access.log combined
+</VirtualHost>

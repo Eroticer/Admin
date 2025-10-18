@@ -1,0 +1,7 @@
+[pxe_servers]
+pxeserver ansible_host=10.0.0.20 ansible_user=vagrant
+
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+ansible_become=true
