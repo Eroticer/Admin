@@ -1,0 +1,130 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install packages
+      yum:
+        name:
+          - bind
+          - bind-utils
+        state: latest
+        update_cache: yes
+
+    - name: Start and enable chronyd
+      service:
+        name: chronyd
+        state: started
+        enabled: yes
+
+    - name: Copy transfer key
+      copy:
+        src: named.zonetransfer.key
+        dest: /etc/named.zonetransfer.key
+        owner: root
+        group: named
+        mode: 0644
+
+- hosts: ns01
+  become: yes
+  tasks:
+    - name: Copy named.conf for master
+      copy:
+        src: master-named.conf
+        dest: /etc/named.conf
+        owner: root
+        group: named
+        mode: 0640
+
+    - name: Copy zone files
+      copy:
+        src: "{{ item }}"
+        dest: /etc/named/
+        owner: root
+        group: named
+        mode: 0660
+      loop:
+        - named.ddns.lab
+        - named.dns.lab
+        - named.dns.lab.client
+        - named.dns.lab.rev
+        - named.newdns.lab
+
+    - name: Copy resolv.conf to ns01
+      copy:
+        src: servers-resolv.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Set /etc/named permissions
+      file:
+        path: /etc/named
+        owner: root
+        group: named
+        mode: 0670
+
+    - name: Ensure named is running and enabled
+      service:
+        name: named
+        state: restarted
+        enabled: yes
+
+- hosts: ns02
+  become: yes
+  tasks:
+    - name: Copy named.conf for slave
+      copy:
+        src: slave-named.conf
+        dest: /etc/named.conf
+        owner: root
+        group: named
+        mode: 0640
+
+    - name: Copy resolv.conf to ns02
+      copy:
+        src: servers-resolv.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Set /etc/named permissions
+      file:
+        path: /etc/named
+        owner: root
+        group: named
+        mode: 0670
+
+    - name: Ensure named is running and enabled
+      service:
+        name: named
+        state: restarted
+        enabled: yes
+
+- hosts: client,client2
+  become: yes
+  tasks:
+    - name: Copy resolv.conf to clients
+      copy:
+        src: client-resolv.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Copy rndc conf file
+      copy:
+        src: rndc.conf
+        dest: /home/vagrant/rndc.conf
+        owner: vagrant
+        group: vagrant
+        mode: 0644
+
+    - name: Copy motd to clients
+      copy:
+        src: client-motd
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: 0644
