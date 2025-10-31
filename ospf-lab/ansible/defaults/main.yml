@@ -1,0 +1,3 @@
+---
+# OSPF configuration
+symmetric_routing: false

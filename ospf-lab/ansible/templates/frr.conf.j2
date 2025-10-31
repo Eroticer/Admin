@@ -1,0 +1,74 @@
+frr version 8.1
+frr defaults traditional
+hostname {{ ansible_hostname }}
+log syslog informational
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+{% if ansible_hostname == 'router1' %}
+interface eth1
+ description r1-r2
+ ip address 10.0.10.1/30
+ ip ospf cost 1000
+!
+interface eth2
+ description r1-r3
+ ip address 10.0.12.1/30
+ ip ospf cost 100
+!
+interface eth3
+ description net_router1
+ ip address 192.168.10.1/24
+!
+{% elif ansible_hostname == 'router2' %}
+interface eth1
+ description r1-r2
+ ip address 10.0.10.2/30
+{% if symmetric_routing %}
+ ip ospf cost 1000
+{% else %}
+ ip ospf cost 100
+{% endif %}
+!
+interface eth2
+ description r2-r3
+ ip address 10.0.11.2/30
+ ip ospf cost 100
+!
+interface eth3
+ description net_router2
+ ip address 192.168.20.1/24
+!
+{% elif ansible_hostname == 'router3' %}
+interface eth1
+ description r2-r3
+ ip address 10.0.11.1/30
+ ip ospf cost 100
+!
+interface eth2
+ description r1-r3
+ ip address 10.0.12.2/30
+ ip ospf cost 100
+!
+interface eth3
+ description net_router3
+ ip address 192.168.30.1/24
+!
+{% endif %}
+!
+router ospf
+{% if ansible_hostname == 'router1' %}
+ router-id 1.1.1.1
+{% elif ansible_hostname == 'router2' %}
+ router-id 2.2.2.2
+{% elif ansible_hostname == 'router3' %}
+ router-id 3.3.3.3
+{% endif %}
+ network 10.0.10.0/30 area 0
+ network 10.0.11.0/30 area 0
+ network 10.0.12.0/30 area 0
+ network 192.168.10.0/24 area 0
+ network 192.168.20.0/24 area 0
+ network 192.168.30.0/24 area 0
+!
+log file /var/log/frr/frr.log

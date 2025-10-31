@@ -1,0 +1,16 @@
+---
+- name: Setup TUN/TAP VPN
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create OpenVPN directory
+      file:
+        path: /etc/openvpn
+        state: directory
+        mode: 0755
+
+    - name: Copy OpenVPN service file
+      copy:
+        src: templates/openvpn@.service
+        dest: /etc/systemd/system/openvpn@.service
+        mode: 0644

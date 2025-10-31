@@ -1,0 +1,113 @@
+---
+- name: Configure OSPF lab with FRR
+  hosts: all
+  become: yes
+  gather_facts: yes
+  vars_files:
+    - defaults/main.yml
+
+  tasks:
+    - name: Wait for system to be ready
+      wait_for_connection:
+        timeout: 60
+
+    - name: Install basic tools
+      dnf:
+        name:
+          - vim
+          - traceroute
+          - tcpdump
+          - net-tools
+          - wget
+          - curl
+        state: present
+      tags: [base]
+
+    - name: Disable firewalld
+      service:
+        name: firewalld
+        state: stopped
+        enabled: false
+      tags: [base]
+
+    - name: Enable IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        state: present
+        reload: yes
+      tags: [base]
+
+    - name: Disable reverse path filtering for asymmetric routing
+      sysctl:
+        name: net.ipv4.conf.all.rp_filter
+        value: '0'
+        state: present
+        reload: yes
+      tags: [base]
+
+    - name: Install EPEL repository
+      dnf:
+        name: epel-release
+        state: present
+      tags: [frr]
+
+    - name: Install FRR from EPEL
+      dnf:
+        name:
+          - frr
+          - frr-pythontools
+        state: present
+      tags: [frr]
+
+    - name: Configure FRR daemons
+      template:
+        src: daemons
+        dest: /etc/frr/daemons
+        owner: frr
+        group: frr
+        mode: '0640'
+      tags: [frr, ospf]
+
+    - name: Configure FRR OSPF
+      template:
+        src: frr.conf.j2
+        dest: /etc/frr/frr.conf
+        owner: frr
+        group: frr
+        mode: '0640'
+      tags: [frr, ospf]
+
+    - name: Create FRR log directory
+      file:
+        path: /var/log/frr
+        state: directory
+        owner: frr
+        group: frr
+        mode: '0755'
+      tags: [frr]
+
+    - name: Start and enable FRR service
+      service:
+        name: frr
+        state: restarted
+        enabled: yes
+      tags: [frr, ospf]
+
+    - name: Wait for OSPF to establish neighbors
+      wait_for:
+        timeout: 45
+      tags: [ospf]
+
+    - name: Show OSPF neighbors
+      command: vtysh -c "show ip ospf neighbor"
+      register: ospf_neighbors
+      changed_when: false
+      ignore_errors: yes
+      tags: [ospf, debug]
+
+    - name: Display OSPF neighbors
+      debug:
+        var: ospf_neighbors.stdout
+      when: ospf_neighbors.stdout != ""
+      tags: [ospf, debug]
