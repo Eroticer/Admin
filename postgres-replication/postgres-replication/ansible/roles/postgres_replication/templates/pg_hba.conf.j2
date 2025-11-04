@@ -1,0 +1,17 @@
+# PostgreSQL Client Authentication Configuration File
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             all             ::1/128                 scram-sha-256
+
+# Replication
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            scram-sha-256
+host    replication     all             ::1/128                 scram-sha-256
+host    replication     replicator      {{ master_ip }}/32      scram-sha-256
+host    replication     replicator      {{ slave_ip }}/32       scram-sha-256
+
+# Barman access
+host    all             barman          {{ slave_ip }}/32       scram-sha-256
+host    replication     barman          {{ slave_ip }}/32       scram-sha-256

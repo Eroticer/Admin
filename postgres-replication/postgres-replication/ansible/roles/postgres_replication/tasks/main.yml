@@ -1,0 +1,95 @@
+---
+- name: Create archive directory
+  file:
+    path: /var/lib/pgsql/14/archive
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0700'
+
+- name: Create replicator user on master
+  become_user: postgres
+  postgresql_user:
+    name: replicator
+    password: "{{ replicator_password }}"
+    role_attr_flags: REPLICATION
+  when: ansible_hostname == "node1"
+
+- name: Copy PostgreSQL configuration
+  template:
+    src: postgresql.conf.j2
+    dest: /var/lib/pgsql/14/data/postgresql.conf
+    owner: postgres
+    group: postgres
+    mode: '0600'
+  notify: restart postgresql
+
+- name: Copy pg_hba configuration
+  template:
+    src: pg_hba.conf.j2
+    dest: /var/lib/pgsql/14/data/pg_hba.conf
+    owner: postgres
+    group: postgres
+    mode: '0600'
+  notify: restart postgresql
+
+- name: Stop PostgreSQL on slave for base backup
+  systemd:
+    name: postgresql-14
+    state: stopped
+  when: ansible_hostname == "node2"
+
+- name: Remove data directory on slave
+  file:
+    path: /var/lib/pgsql/14/data
+    state: absent
+  when: ansible_hostname == "node2"
+
+- name: Create base backup on slave
+  become_user: postgres
+  shell: |
+    /usr/pgsql-14/bin/pg_basebackup -h {{ master_ip }} -U replicator -D /var/lib/pgsql/14/data -P -R -X stream
+  environment:
+    PGPASSWORD: "{{ replicator_password }}"
+  when: ansible_hostname == "node2"
+
+- name: Create recovery.conf on slave
+  become_user: postgres
+  copy:
+    content: |
+      standby_mode = 'on'
+      primary_conninfo = 'host={{ master_ip }} port=5432 user=replicator password={{ replicator_password }}'
+      primary_slot_name = 'standby_slot'
+    dest: /var/lib/pgsql/14/data/standby.signal
+    owner: postgres
+    group: postgres
+    mode: '0600'
+  when: ansible_hostname == "node2"
+
+- name: Start PostgreSQL on slave
+  systemd:
+    name: postgresql-14
+    state: started
+    enabled: yes
+  when: ansible_hostname == "node2"
+
+- name: Create replication slot on master
+  become_user: postgres
+  postgresql_slot:
+    name: standby_slot
+    state: present
+    slot_type: physical
+  when: ansible_hostname == "node1"
+
+- name: Create test database
+  become_user: postgres
+  postgresql_db:
+    name: otus_test
+    state: present
+  when: ansible_hostname == "node1"
+
+- handlers:
+    - name: restart postgresql
+      systemd:
+        name: postgresql-14
+        state: restarted

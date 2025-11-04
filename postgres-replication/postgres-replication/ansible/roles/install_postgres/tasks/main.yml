@@ -1,0 +1,32 @@
+---
+- name: Add PostgreSQL repository
+  dnf:
+    name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    state: present
+
+- name: Disable built-in PostgreSQL module
+  command: dnf -qy module disable postgresql
+
+- name: Install PostgreSQL 14
+  dnf:
+    name:
+      - postgresql14-server
+      - postgresql14-contrib
+    state: present
+    update_cache: yes
+
+- name: Initialize PostgreSQL database
+  command: /usr/pgsql-14/bin/postgresql-14-setup initdb
+  args:
+    creates: /var/lib/pgsql/14/data/postgresql.conf
+
+- name: Start and enable PostgreSQL service
+  systemd:
+    name: postgresql-14
+    state: started
+    enabled: yes
+
+- name: Install Python PostgreSQL adapter
+  pip:
+    name: psycopg2-binary
+    state: present

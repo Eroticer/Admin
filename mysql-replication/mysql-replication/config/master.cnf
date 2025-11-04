@@ -1,0 +1,18 @@
+[mysqld]
+server-id = 1
+log_bin = mysql-bin
+binlog_format = ROW
+gtid_mode = ON
+enforce_gtid_consistency = ON
+log_slave_updates = ON
+
+# Директивы для репликации конкретных таблиц
+replicate-do-db = bet
+replicate-do-table = bet.bookmaker
+replicate-do-table = bet.competition
+replicate-do-table = bet.market
+replicate-do-table = bet.odds
+replicate-do-table = bet.outcome
+
+[client]
+socket = /var/lib/mysql/mysql.sock

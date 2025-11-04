@@ -1,0 +1,11 @@
+[barman]
+barman_home = /var/lib/barman
+barman_user = barman
+log_file = /var/log/barman/barman.log
+compression = gzip
+backup_method = postgres
+archiver = on
+retention_policy = REDUNDANCY 2
+immediate_checkpoint = true
+last_backup_maximum_age = 3 DAYS
+minimum_redundancy = 1

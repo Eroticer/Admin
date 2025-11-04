@@ -1,0 +1,35 @@
+# PostgreSQL Configuration File
+listen_addresses = 'localhost, {{ master_ip if ansible_hostname == "node1" else slave_ip }}'
+port = 5432
+max_connections = 100
+
+# Memory Settings
+shared_buffers = 128MB
+work_mem = 4MB
+
+# WAL Settings
+wal_level = replica
+max_wal_senders = 3
+max_replication_slots = 3
+wal_keep_size = 1GB
+
+# Archive Settings
+archive_mode = on
+archive_command = 'test ! -f /var/lib/pgsql/14/archive/%f && cp %p /var/lib/pgsql/14/archive/%f'
+
+# Replication Settings
+hot_standby = on
+hot_standby_feedback = on
+max_standby_streaming_delay = 30s
+
+# Logging
+log_destination = 'stderr'
+logging_collector = on
+log_directory = '/var/lib/pgsql/14/log'
+log_filename = 'postgresql-%a.log'
+log_rotation_age = 1d
+log_rotation_size = 0
+log_truncate_on_rotation = on
+
+# Timezone
+timezone = 'UTC'

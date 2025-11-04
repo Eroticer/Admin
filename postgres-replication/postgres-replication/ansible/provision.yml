@@ -1,0 +1,27 @@
+---
+- name: Install base tools
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install base packages
+      dnf:
+        name:
+          - vim
+          - telnet
+          - git
+          - python3-pip
+        state: present
+        update_cache: yes
+
+- name: Install PostgreSQL and setup replication
+  hosts: node1,node2
+  become: yes
+  roles:
+    - install_postgres
+    - postgres_replication
+
+- name: Setup Barman backup
+  hosts: all
+  become: yes
+  roles:
+    - install_barman
