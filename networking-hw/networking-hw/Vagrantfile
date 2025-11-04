@@ -1,0 +1,100 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+MACHINES = {
+  :inetRouter => {
+        :box_name => "generic/rocky9",
+        :vm_name => "inetRouter",
+        :net => [
+                   {adapter: 2, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {adapter: 3, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.10', adapter: 8, type: "bridge", bridge: "virbr0"},
+                ]
+  },
+  :centralRouter => {
+        :box_name => "generic/rocky9",
+        :vm_name => "centralRouter",
+        :net => [
+                   {adapter: 2, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {adapter: 3, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.255.9', adapter: 6, netmask: "255.255.255.252", type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.11', adapter: 8, type: "bridge", bridge: "virbr0"},
+                ]
+  },
+
+  :office1Router => {
+        :box_name => "generic/rocky9",
+        :vm_name => "office1Router",
+        :net => [
+                   {ip: '192.168.255.10', adapter: 2, netmask: "255.255.255.252", type: "bridge", bridge: "virbr0"},
+                   {adapter: 3, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {adapter: 4, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {adapter: 5, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {adapter: 6, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.20', adapter: 8, type: "bridge", bridge: "virbr0"},
+                ]
+  },
+
+  :testClient1 => {
+        :box_name => "generic/rocky9",
+        :vm_name => "testClient1",
+        :net => [
+                   {adapter: 2, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.21', adapter: 8, type: "bridge", bridge: "virbr0"},
+                ]
+  },
+
+  :testServer1 => {
+        :box_name => "generic/rocky9",
+        :vm_name => "testServer1",
+        :net => [
+                   {adapter: 2, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.22', adapter: 8, type: "bridge", bridge: "virbr0"},
+            ]
+  },
+
+  :testClient2 => {
+        :box_name => "generic/ubuntu2204",
+        :vm_name => "testClient2",
+        :net => [
+                   {adapter: 2, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.31', adapter: 8, type: "bridge", bridge: "virbr0"},
+                ]
+  },
+
+  :testServer2 => {
+        :box_name => "generic/ubuntu2204",
+        :vm_name => "testServer2",
+        :net => [
+                   {adapter: 2, auto_config: false, type: "bridge", bridge: "virbr0"},
+                   {ip: '192.168.56.32', adapter: 8, type: "bridge", bridge: "virbr0"},
+                ]
+  },
+
+}
+
+Vagrant.configure("2") do |config|
+
+  MACHINES.each do |boxname, boxconfig|
+    
+    config.vm.define boxname do |box|
+   
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxconfig[:vm_name]
+
+      config.vm.provider "libvirt" do |v|
+        v.memory = 1024
+        v.cpus = 2
+       end
+
+      boxconfig[:net].each do |ipconf|
+        box.vm.network "private_network", ipconf
+      end
+
+      box.vm.provision "shell", inline: <<-SHELL
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+      SHELL
+    end
+  end
+end

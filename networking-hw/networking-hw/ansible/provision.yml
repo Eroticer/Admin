@@ -1,0 +1,101 @@
+---
+- name: Base set up
+  hosts: all
+  become: yes
+  tasks:
+  - name: install software on CentOS
+    dnf:
+      name:
+        - vim
+        - traceroute
+        - tcpdump
+        - net-tools
+      state: present
+      update_cache: true
+    when: ansible_os_family == "RedHat"
+  
+  - name: install software on Debian-based
+    apt:
+      name: 
+        - vim
+        - traceroute
+        - tcpdump
+        - net-tools
+      state: present
+      update_cache: true
+    when: ansible_os_family == "Debian"
+
+- name: Set up bond interface
+  hosts: bond
+  become: yes
+  tasks:
+  - name: Install bond support on CentOS
+    dnf:
+      name: kernel-modules-extra
+      state: present
+    when: ansible_os_family == "RedHat"
+
+  - name: Create bond interface configuration
+    template:
+      src: templates/ifcfg-bond0.j2
+      dest: /etc/sysconfig/network-scripts/ifcfg-bond0
+      owner: root
+      group: root
+      mode: 0644
+    when: ansible_os_family == "RedHat"
+
+  - name: Create eth1 configuration for bond
+    copy:
+      src: templates/ifcfg-eth1
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      owner: root
+      group: root
+      mode: 0644
+    when: ansible_os_family == "RedHat"
+
+  - name: Create eth2 configuration for bond
+    copy:
+      src: templates/ifcfg-eth2
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth2
+      owner: root
+      group: root
+      mode: 0644
+    when: ansible_os_family == "RedHat"
+
+  - name: Restart network service
+    service:
+      name: NetworkManager
+      state: restarted
+    when: ansible_os_family == "RedHat"
+
+- name: Set up VLAN on CentOS hosts
+  hosts: vlan_centos
+  become: yes
+  tasks:
+  - name: Create VLAN interface configuration
+    template:
+      src: templates/ifcfg-vlan1.j2
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1.{{ vlan_id }}
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Restart network service for VLAN
+    service:
+      name: NetworkManager
+      state: restarted
+
+- name: Set up VLAN on Ubuntu hosts
+  hosts: vlan_ubuntu
+  become: yes
+  tasks:
+  - name: Create netplan configuration for VLAN
+    template:
+      src: templates/50-cloud-init.yaml.j2
+      dest: /etc/netplan/50-cloud-init.yaml
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Apply netplan configuration
+    shell: netplan apply

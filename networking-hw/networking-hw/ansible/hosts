@@ -1,0 +1,31 @@
+[nets]
+inetRouter ansible_host=192.168.56.10 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/inetRouter/libvirt/private_key bond_ip=192.168.255.1
+centralRouter ansible_host=192.168.56.11 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/centralRouter/libvirt/private_key bond_ip=192.168.255.2
+office1Router ansible_host=192.168.56.20 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/office1Router/libvirt/private_key 
+testClient1 ansible_host=192.168.56.21 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/testClient1/libvirt/private_key vlan_id=1 vlan_ip=10.10.10.254
+testServer1 ansible_host=192.168.56.22 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/testServer1/libvirt/private_key vlan_id=1 vlan_ip=10.10.10.1
+testClient2 ansible_host=192.168.56.31 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/testClient2/libvirt/private_key vlan_id=2 vlan_ip=10.10.10.254
+testServer2 ansible_host=192.168.56.32 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/testServer2/libvirt/private_key vlan_id=2 vlan_ip=10.10.10.1
+
+[centos]
+testClient1
+testServer1
+inetRouter
+centralRouter
+office1Router
+
+[ubuntu]
+testClient2
+testServer2
+
+[bond]
+inetRouter
+centralRouter
+
+[vlan_centos]
+testClient1
+testServer1
+
+[vlan_ubuntu]
+testClient2
+testServer2
