@@ -1,0 +1,25 @@
+---
+- name: Configure all routers
+  hosts: routers
+  roles:
+    - common
+
+- name: Configure inetRouter
+  hosts: inetRouter
+  roles:
+    - inetRouter
+
+- name: Configure inetRouter2
+  hosts: inetRouter2
+  roles:
+    - inetRouter2
+
+- name: Configure centralRouter
+  hosts: centralRouter
+  roles:
+    - centralRouter
+
+- name: Configure centralServer
+  hosts: centralServer
+  roles:
+    - centralServer

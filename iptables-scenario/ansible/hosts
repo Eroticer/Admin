@@ -1,0 +1,20 @@
+[inetRouter]
+192.168.10.1 ansible_ssh_private_key_file=.vagrant/machines/inetRouter/libvirt/private_key
+
+[inetRouter2]
+192.168.10.2 ansible_ssh_private_key_file=.vagrant/machines/inetRouter2/libvirt/private_key
+
+[centralRouter]
+192.168.10.3 ansible_ssh_private_key_file=.vagrant/machines/centralRouter/libvirt/private_key
+
+[centralServer]
+192.168.20.10 ansible_ssh_private_key_file=.vagrant/machines/centralServer/libvirt/private_key
+
+[routers:children]
+inetRouter
+inetRouter2
+centralRouter
+
+[all:vars]
+ansible_user=vagrant
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'

@@ -1,0 +1,95 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.driver = "kvm"
+  end
+
+  # inetRouter - основной шлюз в интернет
+  config.vm.define "inetRouter" do |inetRouter|
+    inetRouter.vm.box = "generic/rocky9"
+    inetRouter.vm.hostname = "inetRouter"
+    
+    # NAT для выхода в интернет
+    inetRouter.vm.network "public_network", 
+      bridge: "virbr0",
+      ip: "192.168.122.100"
+    
+    # Внутренняя сеть
+    inetRouter.vm.network "private_network",
+      ip: "192.168.10.1",
+      netmask: "255.255.255.0"
+    
+    inetRouter.vm.provider :libvirt do |v|
+      v.memory = 512
+      v.cpus = 1
+    end
+  end
+
+  # inetRouter2 - для проброса портов
+  config.vm.define "inetRouter2" do |inetRouter2|
+    inetRouter2.vm.box = "generic/rocky9"
+    inetRouter2.vm.hostname = "inetRouter2"
+    
+    # Host-only сеть для доступа с хоста
+    inetRouter2.vm.network "private_network",
+      ip: "192.168.100.10",
+      netmask: "255.255.255.0"
+    
+    # Подключение к internal сети
+    inetRouter2.vm.network "private_network",
+      ip: "192.168.10.2",
+      netmask: "255.255.255.0"
+    
+    inetRouter2.vm.provider :libvirt do |v|
+      v.memory = 512
+      v.cpus = 1
+    end
+  end
+
+  # centralRouter - внутренний маршрутизатор
+  config.vm.define "centralRouter" do |centralRouter|
+    centralRouter.vm.box = "generic/rocky9"
+    centralRouter.vm.hostname = "centralRouter"
+    
+    # Подключение к internal сети
+    centralRouter.vm.network "private_network",
+      ip: "192.168.10.3",
+      netmask: "255.255.255.0"
+    
+    # LAN сеть
+    centralRouter.vm.network "private_network",
+      ip: "192.168.20.1",
+      netmask: "255.255.255.0"
+    
+    centralRouter.vm.provider :libvirt do |v|
+      v.memory = 512
+      v.cpus = 1
+    end
+  end
+
+  # centralServer - веб-сервер
+  config.vm.define "centralServer" do |centralServer|
+    centralServer.vm.box = "generic/rocky9"
+    centralServer.vm.hostname = "centralServer"
+    
+    # Подключение к LAN сети
+    centralServer.vm.network "private_network",
+      ip: "192.168.20.10",
+      netmask: "255.255.255.0"
+    
+    centralServer.vm.provider :libvirt do |v|
+      v.memory = 512
+      v.cpus = 1
+    end
+  end
+
+  # Ansible provision
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "ansible/provision.yml"
+    ansible.inventory_path = "ansible/hosts"
+    ansible.become = true
+    ansible.verbose = "v"
+  end
+end

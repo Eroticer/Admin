@@ -1,0 +1,100 @@
+---
+- name: Configure port forwarding iptables rules
+  block:
+    - name: Flush existing iptables rules
+      iptables:
+        flush: yes
+
+    - name: Set default policies
+      iptables:
+        chain: "{{ item.chain }}"
+        policy: "{{ item.policy }}"
+      with_items:
+        - { chain: 'INPUT', policy: 'DROP' }
+        - { chain: 'FORWARD', policy: 'DROP' }
+        - { chain: 'OUTPUT', policy: 'ACCEPT' }
+
+    - name: Allow loopback
+      iptables:
+        chain: INPUT
+        in_interface: lo
+        jump: ACCEPT
+
+    - name: Allow established connections
+      iptables:
+        chain: INPUT
+        ctstate: ESTABLISHED,RELATED
+        jump: ACCEPT
+
+    - name: Allow ICMP
+      iptables:
+        chain: INPUT
+        protocol: icmp
+        jump: ACCEPT
+
+    - name: Allow SSH from host network
+      iptables:
+        chain: INPUT
+        source: "192.168.100.0/24"
+        protocol: tcp
+        destination_port: '22'
+        jump: ACCEPT
+
+    - name: Allow HTTP access on port 8080
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: '8080'
+        jump: ACCEPT
+
+    - name: Configure port forwarding from 8080 to centralServer:80
+      iptables:
+        table: nat
+        chain: PREROUTING
+        protocol: tcp
+        destination_port: '8080'
+        jump: DNAT
+        to_destination: '192.168.20.10:80'
+        comment: "Forward port 8080 to centralServer:80"
+
+    - name: Allow forwarding to centralServer
+      iptables:
+        chain: FORWARD
+        destination: "192.168.20.10"
+        protocol: tcp
+        destination_port: '80'
+        jump: ACCEPT
+
+    - name: Allow return traffic from centralServer
+      iptables:
+        chain: FORWARD
+        source: "192.168.20.10"
+        ctstate: ESTABLISHED,RELATED
+        jump: ACCEPT
+
+    - name: Configure NAT for forwarded traffic
+      iptables:
+        table: nat
+        chain: POSTROUTING
+        destination: "192.168.20.10"
+        protocol: tcp
+        destination_port: '80'
+        jump: MASQUERADE
+
+    - name: Save iptables rules
+      command: iptables-save > /etc/sysconfig/iptables
+      args:
+        creates: /etc/sysconfig/iptables
+
+  rescue:
+    - name: Reset iptables on error
+      command: iptables -F
+      ignore_errors: yes
+
+- name: Configure routing
+  template:
+    src: routes.j2
+    dest: /etc/sysconfig/network-scripts/route-eth1
+    owner: root
+    group: root
+    mode: '0644'
