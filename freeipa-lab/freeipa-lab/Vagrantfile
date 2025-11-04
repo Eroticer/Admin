@@ -1,0 +1,43 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Общие настройки для всех ВМ
+  config.vm.provider "libvirt" do |v|
+    v.memory = 2048
+    v.cpus = 1
+  end
+
+  # Указываем имена хостов и их IP-адреса
+  boxes = [
+    { 
+      :name => "ipa.otus.lan",
+      :ip => "192.168.57.10",
+      :box => "generic/rocky9"
+    },
+    { 
+      :name => "client1.otus.lan", 
+      :ip => "192.168.57.11",
+      :box => "generic/rocky9"
+    },
+    { 
+      :name => "client2.otus.lan",
+      :ip => "192.168.57.12",
+      :box => "generic/rocky9"
+    }
+  ]
+
+  # Цикл запуска виртуальных машин
+  boxes.each do |opts|
+    config.vm.define opts[:name] do |config|
+      config.vm.box = opts[:box]
+      config.vm.hostname = opts[:name]
+      config.vm.network "private_network", ip: opts[:ip], type: "bridge", bridge: "virbr0"
+      
+      config.vm.provision "shell", inline: <<-SHELL
+        mkdir -p ~root/.ssh
+        cp ~vagrant/.ssh/auth* ~root/.ssh
+      SHELL
+    end
+  end
+end

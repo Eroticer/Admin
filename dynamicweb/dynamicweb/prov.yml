@@ -1,0 +1,145 @@
+---
+- name: Configure Dynamic Web Stack
+  hosts: DynamicWeb
+  become: yes
+  gather_facts: true
+  
+  tasks:
+    - name: Install required system packages
+      dnf:
+        name:
+          - curl
+          - wget
+          - git
+          - python3-pip
+          - libselinux-python3
+          - device-mapper-persistent-data
+          - lvm2
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      rpm_key:
+        key: https://download.docker.com/linux/centos/gpg
+        state: present
+
+    - name: Add Docker repository
+      yum_repository:
+        name: docker-ce
+        description: Docker CE Stable
+        baseurl: https://download.docker.com/linux/centos/9/x86_64/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
+
+    - name: Install Docker
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add vagrant user to docker group
+      user:
+        name: vagrant
+        groups: docker
+        append: yes
+
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Create project directory
+      file:
+        path: /home/vagrant/project
+        state: directory
+        owner: vagrant
+        group: vagrant
+        mode: '0755'
+
+    - name: Copy project files
+      copy:
+        src: "{{ item }}"
+        dest: /home/vagrant/project/
+        owner: vagrant
+        group: vagrant
+      with_fileglob:
+        - "project/*"
+      when: item is not directory
+
+    - name: Copy nginx configuration
+      copy:
+        src: "project/nginx-conf/"
+        dest: /home/vagrant/project/nginx-conf/
+        owner: vagrant
+        group: vagrant
+
+    - name: Copy node application
+      copy:
+        src: "project/node/"
+        dest: /home/vagrant/project/node/
+        owner: vagrant
+        group: vagrant
+
+    - name: Copy python application
+      copy:
+        src: "project/python/"
+        dest: /home/vagrant/project/python/
+        owner: vagrant
+        group: vagrant
+
+    - name: Create wordpress directory
+      file:
+        path: /home/vagrant/project/wordpress
+        state: directory
+        owner: vagrant
+        group: vagrant
+
+    - name: Create dbdata directory
+      file:
+        path: /home/vagrant/project/dbdata
+        state: directory
+        owner: vagrant
+        group: vagrant
+
+    - name: Copy environment file
+      copy:
+        src: .env
+        dest: /home/vagrant/project/.env
+        owner: vagrant
+        group: vagrant
+
+    - name: Reset SSH connection to apply group changes
+      meta: reset_connection
+
+    - name: Deploy with Docker Compose
+      shell:
+        cmd: "docker-compose -f docker-compose.yml up -d"
+        chdir: /home/vagrant/project
+      environment:
+        COMPOSE_PROJECT_NAME: dynamicweb
+      async: 45
+      poll: 5
+
+    - name: Wait for services to be ready
+      wait_for:
+        timeout: 60
+
+    - name: Check running containers
+      shell: docker ps
+      register: docker_ps
+      changed_when: false
+
+    - name: Show running containers
+      debug:
+        var: docker_ps.stdout_lines

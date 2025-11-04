@@ -1,0 +1,12 @@
+[ipa_server]
+ipa.otus.lan ansible_host=192.168.57.10 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/ipa.otus.lan/libvirt/private_key
+
+[clients]
+client1.otus.lan ansible_host=192.168.57.11 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/client1.otus.lan/libvirt/private_key
+client2.otus.lan ansible_host=192.168.57.12 ansible_user=vagrant ansible_ssh_private_key_file=./.vagrant/machines/client2.otus.lan/libvirt/private_key
+
+[all:vars]
+ipa_domain=otus.lan
+ipa_realm=OTUS.LAN
+ipa_admin_password=Otus2024!
+directory_manager_password=Otus2024!

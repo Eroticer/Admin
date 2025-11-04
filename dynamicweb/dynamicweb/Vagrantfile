@@ -1,0 +1,25 @@
+Vagrant.configure(2) do |config|
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.driver = "kvm"
+    libvirt.memory = 2048
+    libvirt.cpus = 2
+  end
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "prov.yml"
+    ansible.verbose = true
+  end
+
+  config.vm.define "DynamicWeb" do |vmconfig|
+    vmconfig.vm.box = "generic/rocky9"
+    vmconfig.vm.hostname = "DynamicWeb"
+
+    # Port forwarding
+    vmconfig.vm.network "forwarded_port", guest: 8083, host: 8083
+    vmconfig.vm.network "forwarded_port", guest: 8081, host: 8081
+    vmconfig.vm.network "forwarded_port", guest: 8082, host: 8082
+    
+    # Synced folder
+    vmconfig.vm.synced_folder "project", "/home/vagrant/project"
+  end
+end

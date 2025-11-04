@@ -1,0 +1,187 @@
+---
+- name: Configure FreeIPA server
+  hosts: ipa_server
+  become: yes
+  vars:
+    ipa_domain: "otus.lan"
+    ipa_realm: "OTUS.LAN"
+    ipa_admin_password: "Otus2024!"
+    directory_manager_password: "Otus2024!"
+  tasks:
+    - name: Install required packages
+      dnf:
+        name:
+          - vim
+          - chrony
+          - firewalld
+        state: present
+
+    - name: Set timezone
+      timezone:
+        name: "Europe/Moscow"
+
+    - name: Start and enable chronyd
+      service:
+        name: chronyd
+        state: started
+        enabled: true
+
+    - name: Configure hosts file
+      template:
+        src: templates/hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Install FreeIPA server packages
+      dnf:
+        name:
+          - ipa-server
+          - ipa-server-dns
+        state: present
+
+    - name: Configure firewalld for FreeIPA
+      firewalld:
+        service: "{{ item }}"
+        state: enabled
+        immediate: true
+        permanent: true
+      loop:
+        - http
+        - https
+        - ldap
+        - ldaps
+        - kerberos
+        - kpasswd
+        - dns
+        - ntp
+
+    - name: Install FreeIPA server
+      shell: |
+        ipa-server-install \
+          --domain={{ ipa_domain }} \
+          --realm={{ ipa_realm }} \
+          --ds-password="{{ directory_manager_password }}" \
+          --admin-password="{{ ipa_admin_password }}" \
+          --hostname=ipa.otus.lan \
+          --ip-address=192.168.57.10 \
+          --setup-dns \
+          --forwarder=8.8.8.8 \
+          --forwarder=1.1.1.1 \
+          --no-ntp \
+          --unattended
+      args:
+        creates: /etc/ipa/default.conf
+
+    - name: Wait for IPA services to start
+      shell: ipactl status
+      register: ipa_status
+      until: ipa_status.rc == 0
+      retries: 10
+      delay: 30
+
+    - name: Create test user
+      shell: |
+        echo "{{ ipa_admin_password }}" | kinit admin
+        ipa user-add otus-user \
+          --first=Otus \
+          --last=User \
+          --password <<EOF
+{{ ipa_admin_password }}
+{{ ipa_admin_password }}
+EOF
+      args:
+        creates: /tmp/user_created
+      environment:
+        KRB5CCNAME: /tmp/krb5cc_ansible
+
+    - name: Create flag file
+      file:
+        path: /tmp/user_created
+        state: touch
+
+- name: Configure FreeIPA clients
+  hosts: clients
+  become: yes
+  vars:
+    ipa_server: "ipa.otus.lan"
+    ipa_domain: "otus.lan"
+    ipa_realm: "OTUS.LAN"
+    ipa_admin_password: "Otus2024!"
+  tasks:
+    - name: Install required packages
+      dnf:
+        name:
+          - vim
+          - chrony
+          - firewalld
+          - freeipa-client
+          - authselect
+          - oddjob
+          - oddjob-mkhomedir
+        state: present
+
+    - name: Set timezone
+      timezone:
+        name: "Europe/Moscow"
+
+    - name: Start and enable chronyd
+      service:
+        name: chronyd
+        state: started
+        enabled: true
+
+    - name: Configure hosts file
+      template:
+        src: templates/hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Configure firewalld for FreeIPA client
+      firewalld:
+        service: "{{ item }}"
+        state: enabled
+        immediate: true
+        permanent: true
+      loop:
+        - ssh
+        - http
+        - https
+
+    - name: Join FreeIPA domain
+      shell: |
+        echo "{{ ipa_admin_password }}" | ipa-client-install \
+          --domain={{ ipa_domain }} \
+          --server={{ ipa_server }} \
+          --realm={{ ipa_realm }} \
+          --principal=admin \
+          --password \
+          --mkhomedir \
+          --no-ntp \
+          --unattended \
+          --force-join
+      args:
+        creates: /etc/ipa/default.conf
+
+    - name: Configure authselect for FreeIPA
+      command: authselect select sssd with-mkhomedir --force
+
+    - name: Enable and start sssd
+      service:
+        name: sssd
+        state: started
+        enabled: true
+
+    - name: Test Kerberos authentication
+      shell: |
+        echo "{{ ipa_admin_password }}" | kinit otus-user
+        klist
+      environment:
+        KRB5CCNAME: /tmp/krb5cc_test
+
+    - name: Cleanup Kerberos ticket
+      shell: kdestroy -A
+      ignore_errors: true
